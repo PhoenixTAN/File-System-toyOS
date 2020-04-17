@@ -1,3 +1,6 @@
+#ifndef THREAD_H
+#define THREAD
+
 /* Thead status */
 enum THREAD_STATUS {
     NEW, READY, RUNNING, BLOCK, TERMINATED
@@ -14,3 +17,4 @@ typedef struct {
 } TCB;
 
 
+#endif

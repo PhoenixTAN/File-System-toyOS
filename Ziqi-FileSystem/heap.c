@@ -1,3 +1,8 @@
+/**
+ * This file refers to the code from Qijia Liu.
+ * malloc()
+*/
+
 #include "heap.h"
 
 #define WSIZE 4

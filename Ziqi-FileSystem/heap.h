@@ -1,3 +1,6 @@
+/**
+ * This file refers to the code from Qijia Liu.
+*/
 #ifndef HEAP_H
 #define HEAP_H
 

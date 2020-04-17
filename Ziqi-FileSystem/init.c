@@ -9,6 +9,7 @@
 #include "print.h"
 #include "interrupt.h"
 #include "memos.h"
+#include "queue.h"
 
 /* Macros. */
 /* The number of threads */
@@ -60,6 +61,9 @@ void init(unsigned long addr) {
 
     print_memory_map(addr);
 
+    Queue* queue = init_queue(N);
+    
+
     /* initialize ready queue */
     init_ready_queue();
 
@@ -67,6 +71,32 @@ void init(unsigned long addr) {
     create_thread(&stack1[stack_size-1], thread1_run);
     create_thread(&stack2[stack_size-1], thread2_run);
     create_thread(&stack3[stack_size-1], thread3_run);
+
+    TCB* t = (TCB*)queue->poll(queue); // 输出为空
+    if( !t ) {
+        println("queue is empty");
+    }
+
+    queue->add(queue, &tcb[0]);
+
+    queue->add(queue, &tcb[1]);
+
+    queue->add(queue, &tcb[2]);
+
+    // print queue
+    int i;
+    for( i = 0; i < N; i++ ) {
+        t = (TCB*)queue->poll(queue);
+        put_char(t->tid + '0');
+        put_char(' ');
+    }
+
+    t = (TCB*)queue->poll(queue);
+    if( !t ) {
+        println("queue is empty");
+    }
+
+    __asm__ __volatile__("hlt");
 
     init_pic();
     init_pit();
