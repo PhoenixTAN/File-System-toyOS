@@ -30,12 +30,12 @@ As with Approach 1, you can assume that your ramdisk memory area is initialized 
 
 ## Common to Both Approaches
 
-### dding filesystem data structures:
+### adding filesystem data structures:
 Once your ramdisk memory area is established, you can treat it like **a raw partition**, comprised of a sequence of blocks. You can assume that a ramdisk **block is of size 256 bytes**, and the first block of the partition is a **superblock** containing filesystem-specific information that we will describe later. 
 
 这里为什么是256个blocks
 
-**The next 256 blocks** contain an array of **"index node"** structures that contain attributes for a given file. Each index node is 64 bytes in size. After the index node array the partition will contain four blocks for a "block bitmap" used to keep track of free and allocated blocks in the rest of the partition. Each bit of the block bitmap will be set to one or zero, depending upon whether or not the corresponding block is free or allocated.
+**The next 256 blocks** contain an array of **"index node"** structures that contain attributes for a given file. **Each index node is 64 bytes in size**. After the index node array the partition will contain four blocks for a "block bitmap" used to keep track of free and allocated blocks in the rest of the partition. Each bit of the block bitmap will be set to one or zero, depending upon whether or not the corresponding block is free or allocated.
 
 The rest of the partition contains the contents of two types of files: **directories and regular files**. 
 
