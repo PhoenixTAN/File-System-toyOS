@@ -2,16 +2,16 @@
 #define THREAD
 
 /* Thead status */
-enum THREAD_STATUS {
+typedef enum  {
     NEW, READY, RUNNING, BLOCK, TERMINATED
-};
+} THREAD_STATUS;
 
 /* TCB(Thread Control Block) */
 typedef struct {
     unsigned int *sp;           // stack pointer
     int tid;                    // a thread uid
     unsigned int (*run)();
-    enum THREAD_STATUS status;
+    THREAD_STATUS status;
     int priority;
 
 } TCB;

@@ -1,21 +1,17 @@
 #ifndef QUEUE_H
 #define QUEUE_H
 
-typedef struct {
+#include "heap.h"
 
-    void** elements;
-
-    unsigned int max_size;
-    unsigned int head;
-    unsigned int tail;
-
-    int (*add)(Queue* queue, void *object);
-    void *(*poll)(Queue* queue);
-    
-} Queue;
+typedef struct Q Queue;
+struct Q
+{
+    int (*add)(Queue *, void *);
+    void *(*poll)(Queue *);
+    int (*isFull)(Queue *);
+    int (*isEmpty)(Queue *);
+};
 
 Queue* init_queue(unsigned int size);
-int queue_add(Queue* queue, void* object);
-void* queue_poll(Queue* queue);
 
 #endif

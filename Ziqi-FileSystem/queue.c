@@ -1,51 +1,107 @@
 #include "heap.h"
 #include "queue.h"
+#include "print.h"
 
-int queue_add(Queue* queue, void* object) {
 
+typedef struct {
+
+    Queue queue;
+    void **elements;
+    unsigned int max_size;
+    unsigned int head;
+    unsigned int tail;
+
+} FIFO_Queue;
+
+
+/* functions */
+Queue* init_queue(unsigned int size);
+int queue_isFull(Queue* queue);
+int queue_isEmpty(Queue* queue);
+int queue_add(Queue* queue, void* object);
+void* queue_poll(Queue* queue);
+
+
+int queue_isFull(Queue* queue) {
+    FIFO_Queue *this = (FIFO_Queue *)queue;
     // the queue is full
-    if( ((queue->tail + 1)%queue->max_size) == queue->head  ) {
-        return -1;
+    if( ((this->tail + 1)%this->max_size) == this->head  ) {
+        println("Queue is full.");
+        return 1;
     }
-
-    queue->elements[queue->tail] = object;
-    queue->tail = (queue->tail + 1) % queue->max_size;
-
     return 0;
 }
 
-void* queue_poll(Queue* queue) {
+
+int queue_isEmpty(Queue* queue) {
+    FIFO_Queue *this = (FIFO_Queue *)queue;
 
     // the queue is empty
-    if( queue->head == queue->tail ) {
-        return NULL;
+    if( this->head == this->tail ) {
+        println("Queue is empty.");
+        return 1;
+    }
+    return 0;
+}
+
+
+int queue_add(Queue* queue, void* object) {
+    
+    if ( queue_isFull(queue) ) {
+        return -1;
     }
 
-    void* object = queue->elements[queue->head];
-    queue->head = (queue->head + 1) % queue->max_size;
+    FIFO_Queue *this = (FIFO_Queue *)queue;
+
+    this->elements[this->tail] = object;
+    this->tail = (this->tail + 1) % this->max_size;
+    
+    return 0;
+}
+
+
+
+void* queue_poll(Queue* queue) {
+
+    if ( queue_isEmpty(queue) ) {
+        return -1;
+    }
+
+    FIFO_Queue *this = (FIFO_Queue *)queue;
+ 
+    void* object = this->elements[this->head];
+    this->head = (this->head + 1) % this->max_size;
     return object;
 }
 
+
 Queue* init_queue(unsigned int size) {
     
-    Queue* queue = malloc(sizeof(Queue));
+    FIFO_Queue *fifo_queue = malloc(sizeof(FIFO_Queue));
+    
     // malloc failed
-    if( !queue ) {
+    if ( !fifo_queue ) {
+        println("Malloc failed: fifo_queue.");
         return NULL;
     }
 
-    queue->elements = malloc(size * sizeof(void *));
+    fifo_queue->elements = malloc(size*sizeof(void *));
     // malloc failed
-    if( !queue->elements ) {
+    if ( !fifo_queue->elements ) {
+        println("Malloc failed: queue.");
         return NULL;
     }
 
-    queue->max_size = size;
-    queue->head = 0;
-    queue->tail = 0;
+    fifo_queue->queue.add = queue_add;
+    fifo_queue->queue.poll = queue_poll;
+    fifo_queue->queue.isFull = queue_isFull;
+    fifo_queue->queue.isEmpty= queue_isEmpty;
 
-    queue->add = queue_add;
-    queue->poll = queue_poll;
+    fifo_queue->max_size = size;
 
-    return queue;
+    fifo_queue->head = 0;
+    fifo_queue->tail = 0;
+
+    return (Queue *)fifo_queue;
 }
+
