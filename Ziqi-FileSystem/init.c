@@ -22,20 +22,7 @@ static TCB tcb[N];
 static int uid = 0;     // counter
 static TCB* lastThread = (void*)0;
 
-/* data structure and operationg for ready queue */
 Queue *ready_queue;
-
-/*
-static TCB* ready_queue[ready_queue_size];
-static int head;
-static int tail;
-void init_ready_queue();
-int en_queue(TCB* tcb);
-TCB* de_queue();
-int isEmpty();
-int isFull();
-void print_ready_queue();
-*/
 
 /* Private stack for threads */
 multiboot_uint32_t stack1[stack_size];
@@ -79,48 +66,6 @@ void init(unsigned long addr) {
     create_thread(&stack1[stack_size-1], thread1_run);
     create_thread(&stack2[stack_size-1], thread2_run);
     create_thread(&stack3[stack_size-1], thread3_run);
-/*
-    TCB *thread;
-    thread = (TCB *)ready_queue->poll(ready_queue); // null
-
-    if ( ready_queue->isFull(ready_queue) ) {
-        println("ready queue is full.");
-    }
-
-    if ( ready_queue->isEmpty(ready_queue) ) {
-        println("ready queue is Empty.");
-    }
-
-    ready_queue->add(ready_queue, &tcb[0]);
-    ready_queue->add(ready_queue, &tcb[1]);
-    thread = (TCB *)ready_queue->poll(ready_queue);
-    put_char(thread->tid + '0');    // 1
-    
-    ready_queue->add(ready_queue, &tcb[2]);
-
-    thread = (TCB *)ready_queue->poll(ready_queue);
-    put_char(thread->tid + '0');    // 2
-    
-    thread = (TCB *)ready_queue->poll(ready_queue);
-    put_char(thread->tid + '0');    // 3
-
-    thread = (TCB *)ready_queue->poll(ready_queue); // null
-
-    // full
-    ready_queue->add(ready_queue, &tcb[0]);
-    ready_queue->add(ready_queue, &tcb[1]);
-    ready_queue->add(ready_queue, &tcb[1]);
-    ready_queue->add(ready_queue, &tcb[1]); // full
-
-    if ( ready_queue->isFull(ready_queue) ) {
-        println("ready queue is full.");
-    }
-
-    if ( ready_queue->isEmpty(ready_queue) ) {
-        println("ready queue is Empty.");
-    }
-    */
-   // __asm__ __volatile__("hlt");
 
     __asm__ __volatile__("sti");
     // wait for interrupt
@@ -213,24 +158,12 @@ void round_robin_scheduler() {
     get_threads_ready();
 
     // (2) if the last thead has not terminated, add into ready queue.
-    /*
-    if(lastThread != (void*)0 && lastThread->status != TERMINATED) {
-        en_queue(lastThread);
-    }
-    */
-
     if ( lastThread != (void*)0 && lastThread->status != TERMINATED ) {
         ready_queue->add(ready_queue, lastThread);
         lastThread->status = READY;
     }
     
     // (3) ready queue is empty
-    /*if( isEmpty() == 1 ) {
-        println("Ready queue is empty.");
-        // println("Scheduling ends.");
-        __asm__ volatile("jmp schedule_finish");
-    }*/
-
     if ( ready_queue->isEmpty(ready_queue) ) {
         println("Ready queue is empty.");
         __asm__ volatile("jmp schedule_finish");
@@ -246,22 +179,13 @@ void round_robin_scheduler() {
 
 /* add new threads into ready queue */
 void get_threads_ready() {
-    /*
-    int i;
-    for( i = 0; i < N; i++ ) {
-        if( tcb[i].status == NEW ) {
-            en_queue(&tcb[i]);
-        }
-    }
-    */
-    
+
     int i;
     for ( i = 0; i < N; i++ ) {
         if( tcb[i].status == NEW /*|| tcb[i].status == READY*/ ) {
             ready_queue->add(ready_queue, &tcb[i]);
             /*print("add: ");
             put_char(tcb[i].tid + '0');*/
-
             tcb[i].status = READY;
         }
     }
@@ -274,7 +198,6 @@ TCB* get_next_thread() {
     TCB* thread = (TCB*)ready_queue->poll(ready_queue);
     /*print("poll");
     put_char(thread->tid + '0');*/
-    // return (TCB*)ready_queue->poll(ready_queue);
     return thread;
 }   
 
@@ -303,70 +226,6 @@ void switch_thread(TCB* nextThread) {
         // "S": ESI, "D": EDI
     }
 }
-
-/* Opeartions for ready queue */
-/*
-void init_ready_queue() {
-    head = 0;
-    tail = 0;
-}
-*/
-
-/* add */
-/*
-int en_queue(TCB* tcb) {
-    if( isFull() == 1 ) {
-        return -1;
-    }
-    tcb->status = READY;
-    ready_queue[tail] = tcb;
-    tail = (tail + 1) % ready_queue_size;
-    return 0;
-}
-*/
-
-/* poll */
-/*
-TCB* de_queue() {
-    if( isEmpty() == 1 ) {
-        return (void*)0;
-    }
-    TCB* tcb = ready_queue[head];
-    head = (head + 1) % ready_queue_size;
-    return tcb;
-}
-*/
-
-/* isEmpty */
-/*
-int isEmpty() {
-    if(head == tail) {
-        return 1;
-    }
-    return -1;
-}
-*/
-
-/* isFull */
-/*
-int isFull() {
-     if ((tail + 1) % ready_queue_size == head ) {
-         return 1;
-     }
-     return -1;
-}
-*/
-
-/* print the current ready queue */
-/*
-void print_ready_queue() {
-    int i;
-    for( i = head; i < tail; i++ ) {
-        put_char(ready_queue[i]->tid + '0');
-        print(" ");
-    }
-}
-*/
 
 /* simulate the running of the thread */
 void delay() {
