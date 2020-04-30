@@ -10,6 +10,7 @@ struct Q
     void *(*poll)(Queue *);
     int (*isFull)(Queue *);
     int (*isEmpty)(Queue *);
+
 };
 
 Queue* init_queue(unsigned int size);

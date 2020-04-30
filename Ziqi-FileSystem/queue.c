@@ -105,3 +105,48 @@ Queue* init_queue(unsigned int size) {
     return (Queue *)fifo_queue;
 }
 
+
+// queue test
+// put this code in a driver function
+/*
+    // queue test
+    TCB *thread;
+    thread = (TCB *)ready_queue->poll(ready_queue); // null
+
+    if ( ready_queue->isFull(ready_queue) ) {
+        println("ready queue is full.");
+    }
+
+    if ( ready_queue->isEmpty(ready_queue) ) {
+        println("ready queue is Empty.");
+    }
+
+    ready_queue->add(ready_queue, &tcb[0]);
+    ready_queue->add(ready_queue, &tcb[1]);
+    thread = (TCB *)ready_queue->poll(ready_queue);
+    put_char(thread->tid + '0');    // 1
+    
+    ready_queue->add(ready_queue, &tcb[2]);
+
+    thread = (TCB *)ready_queue->poll(ready_queue);
+    put_char(thread->tid + '0');    // 2
+    
+    thread = (TCB *)ready_queue->poll(ready_queue);
+    put_char(thread->tid + '0');    // 3
+
+    thread = (TCB *)ready_queue->poll(ready_queue); // null
+
+    // full
+    ready_queue->add(ready_queue, &tcb[0]);
+    ready_queue->add(ready_queue, &tcb[1]);
+    ready_queue->add(ready_queue, &tcb[1]);
+    ready_queue->add(ready_queue, &tcb[1]); // full
+
+    if ( ready_queue->isFull(ready_queue) ) {
+        println("ready queue is full.");
+    }
+
+    if ( ready_queue->isEmpty(ready_queue) ) {
+        println("ready queue is Empty.");
+    }
+*/

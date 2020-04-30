@@ -73,15 +73,13 @@ void init(unsigned long addr) {
 
     /* initialize ready queue */
     // init_ready_queue();
+    ready_queue = init_queue(ready_queue_size);
 
     /* create threads */
     create_thread(&stack1[stack_size-1], thread1_run);
     create_thread(&stack2[stack_size-1], thread2_run);
     create_thread(&stack3[stack_size-1], thread3_run);
-
-    
-    ready_queue = init_queue(N);
-    // queue test
+/*
     TCB *thread;
     thread = (TCB *)ready_queue->poll(ready_queue); // null
 
@@ -121,9 +119,8 @@ void init(unsigned long addr) {
     if ( ready_queue->isEmpty(ready_queue) ) {
         println("ready queue is Empty.");
     }
-    
-
-    __asm__ __volatile__("hlt");
+    */
+   // __asm__ __volatile__("hlt");
 
     __asm__ __volatile__("sti");
     // wait for interrupt
@@ -221,28 +218,29 @@ void round_robin_scheduler() {
         en_queue(lastThread);
     }
     */
-/*
+
     if ( lastThread != (void*)0 && lastThread->status != TERMINATED ) {
         ready_queue->add(ready_queue, lastThread);
+        lastThread->status = READY;
     }
-    */
+    
     // (3) ready queue is empty
     /*if( isEmpty() == 1 ) {
         println("Ready queue is empty.");
         // println("Scheduling ends.");
         __asm__ volatile("jmp schedule_finish");
     }*/
-/*
-    if () {
 
-    }*/
-
+    if ( ready_queue->isEmpty(ready_queue) ) {
+        println("Ready queue is empty.");
+        __asm__ volatile("jmp schedule_finish");
+    }
 
     // (4) Find the next thread
-    // TCB* nextThread = get_next_thread();
+    TCB* nextThread = get_next_thread();
 
     // (5) use asm to switch thread
-    // switch_thread(nextThread);
+    switch_thread(nextThread);
 
 }
 
@@ -256,22 +254,30 @@ void get_threads_ready() {
         }
     }
     */
-    /*
+    
     int i;
     for ( i = 0; i < N; i++ ) {
-        if( tcb[i].status == NEW ) {
+        if( tcb[i].status == NEW /*|| tcb[i].status == READY*/ ) {
             ready_queue->add(ready_queue, &tcb[i]);
+            /*print("add: ");
+            put_char(tcb[i].tid + '0');*/
+
+            tcb[i].status = READY;
         }
     }
-    */
 }
 
+
 /* get next thread from the ready queue */
-/*
 TCB* get_next_thread() {
-    return de_queue();
-}
-*/
+    // return de_queue();
+    TCB* thread = (TCB*)ready_queue->poll(ready_queue);
+    /*print("poll");
+    put_char(thread->tid + '0');*/
+    // return (TCB*)ready_queue->poll(ready_queue);
+    return thread;
+}   
+
 
 /* switch from last*/
 void switch_thread(TCB* nextThread) {
@@ -283,6 +289,7 @@ void switch_thread(TCB* nextThread) {
     else {
         TCB* temp = lastThread;     // record last thread
         lastThread = nextThread;    // update last thread
+        
         nextThread->status = RUNNING;
         // print scheduling information
         /*
