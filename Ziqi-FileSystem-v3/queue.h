@@ -1,15 +1,30 @@
 #ifndef QUEUE_H
 #define QUEUE_H
 
-#include "heap.h"
 
 typedef struct Q Queue;
 struct Q
 {
-    int (*push)(Queue *, void *);
-    void *(*pop)(Queue *);
+    int (*add)(Queue *, void *);
+    void *(*poll)(Queue *);
+    int (*isFull)(Queue *);
+    int (*isEmpyt)(Queue *);
 };
 
-Queue* new_FIFO_Queue(size_t);
+
+typedef struct
+{
+    Queue queue;
+    void **elements;
+    unsigned int size;
+    unsigned int head;
+    unsigned int tail;
+
+} FIFO_Queue;
+
+
+Queue* init_queue(unsigned int);
+
 
 #endif
+

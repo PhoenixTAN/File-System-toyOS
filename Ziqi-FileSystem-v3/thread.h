@@ -3,6 +3,7 @@
 
 #include "queue.h"
 
+
 typedef enum
 {
     empty,
@@ -10,6 +11,7 @@ typedef enum
     ready,
     running
 } State;
+
 
 typedef struct
 {
@@ -19,9 +21,16 @@ typedef struct
     unsigned *esp;
 } TCB;
 
-void init_thread(size_t size);
+
+void init_thread(unsigned int size);
 unsigned thread_create(void (*)());
 unsigned get_tid(void);
 void yield(void);
+
+
+void thread1_run();
+void thread2_run();
+void thread3_run();
+void delay();
 
 #endif
