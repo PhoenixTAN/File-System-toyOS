@@ -76,23 +76,18 @@ int rd_mkdir(char* pathname) {
 	if(strcmp(pathname, "/") == 0 && discos->superblock.free_inodes == MAX_NUM_FILE) {
 		printf("init root dir\n");
 		discos->superblock.free_inodes--;
+		strcpy(discos->inodes[0].type, "dir\0");
 		return 0;
 	}
 	if(strcmp(pathname, "/") == 0 && discos->superblock.free_inodes != MAX_NUM_FILE) {
 		printf("root dir exist!\n");
 		return -1;
 	}
-	parse_absolute_path(pathname, pwd, filename);
-	printf("pwd: %s\n", pwd);
+	// parse_absolute_path(pathname, pwd, filename);
+	// printf("pwd: %s\n", pwd);
 	int cur_dir_node;
 	printf("Cur_dir_node: %d", cur_dir_node);
-	cur_dir_node = get_cur_dir_node(pwd);
-	if(cur_dir_node == 0) {
-		printf("No such file");
-		free(pwd);
-		free(filename);
-		return -1;
-	}
+	cur_dir_node = get_cur_dir_node(pathname);
 	// printf("cur_node: %d\n", cur_dir_node);
 	free(pwd);
 	free(filename);
@@ -112,15 +107,17 @@ void parse_absolute_path(char* _path, char* _current_dir, char* filename) {
 			strcpy(_current_dir, "/\0");
 		}
 	}
-	strcpy(filename, &_path[i + 1]);
+	strcpy(filename, &_path[i + 2]);
 }
 
-int get_cur_dir_node(char* pathname) {
+// 找到想要新建的文件或文件夹，如果找到返回-1，如果没有找到返回能够递归到的最深层的文件inode number，将path name改成剩余的没有创建的文件或文件夹
+int find_node_number(char* pathname) {
 	const char* delim = "/";
 	char* temp_pathname;
 	temp_pathname = malloc(strlen(pathname));
 	strcpy(temp_pathname, pathname);
 	char* split_string = strtok(temp_pathname, delim);
+	int pre_node_num = 0;
 	int cur_node_num = 0;
 	data_block_struct* cur_data_block;
 	while(split_string) {
@@ -129,37 +126,48 @@ int get_cur_dir_node(char* pathname) {
 		//directory entry
 		for(i = 0; i < INODE_NUM_DIRECT_PTR; i++) {
 			cur_data_block = discos->inodes[cur_node_num].pointers[i];
+			//if cur_data_block is null, return cur_node_number, pathname = pathname
 			if(cur_data_block == NULL) {
-				printf("Null Ptr!");
-				return -1;
+				return cur_node_num;
 			}
 			int j;
 			for(j = 0; j < BLOCK_SIZE/sizeof(dir_entry_struct); j++) {
 				if(strcmp(cur_data_block->entries[j].name, split_string) == 0) {
-					cur_node_num = cur_data_block->entries->inode_num;
+					cur_node_num = cur_data_block->entries[j].inode_num;
 					break;
 				}
 			}
-			if(cur_node_num != 0) {
+			if(cur_node_num != pre_node_num) {
 				break;
 			}
 		}
-		if(cur_node_num != 0) {
+		if(cur_node_num != pre_node_num) {
+			pre_node_num = cur_node_num;
 			continue;
 		}
-		// //single directory entry
-		// for(i = 0; i < BLOCK_SIZE/4; i++) {
-		// 	int j;
-		// 	cur_data_block = discos->inodes[cur_node_num].single_indirect_ptrs;
-		// 	for(j = 0; j < BLOCK_SIZE/4; j++) {
-		// 		int k;
-		// 		for(k=0; k < BLOCK_SIZE/sizeof(dir_entry_struct); k++) {
-		// 			if(strcmp(cur_data_block->index_block[j]->entries[k].name, split_string) == 0) {
-		// 				cur_node_num = cur_data_block->index_block[j]->entries[k].inode_num;
-		// 			}
-		// 		}
-		// 	}
-		// }
+
+		//single directory entry
+		for(i = 0; i < BLOCK_SIZE/4; i++) {
+			int j;
+			cur_data_block = discos->inodes[cur_node_num].single_indirect_ptrs;
+			if(cur_data_block == NULL) {
+				return cur_node_num;
+			}
+			for(j = 0; j < BLOCK_SIZE/4; j++) {
+				int k;
+				cur_data_block = discos->inodes[cur_node_num].single_indirect_ptrs->index_block[j];
+				if(cur_data_block == NULL) {
+					return cur_node_num;
+				}
+				for(k = 0; k < BLOCK_SIZE/sizeof(dir_entry_struct); k++) {
+					if(strcmp(cur_data_block->index_block[j]->entries[k].name, split_string) == 0) {
+						cur_node_num = cur_data_block->index_block[j]->entries[k].inode_num;
+						break;
+					}
+				}
+				if(cur_node_num)
+			}
+		}
 		// if(cur_node_num != 0) {
 		// 	continue;
 		// }
@@ -183,13 +191,14 @@ int get_cur_dir_node(char* pathname) {
 		continue;
 	}
 	free(temp_pathname);
-	return cur_node_num;
+	return -1;
 }
 
-//create file or directory
-int create_file(char* filename, char* type, int cur_node_num) {
-	inode_struct cur_inode = discos->inodes[cur_node_num];
-	
+
+
+//后期mode改成mode_t
+int rd_create(char *pathname, int mode) {
+
 }
 /**
  * int rd_creat(char *pathname, mode_t mode)
