@@ -13,7 +13,7 @@ cd
 cd ..
 */
 
-int get_free_block_from_bitmap(char* map);
+int get_free_block_from_bitmap(unsigned char* map);
 
 int main () {
     char str[] ="- This, a sample string.";
@@ -34,9 +34,9 @@ int main () {
     for ( i = 0; i < 1024; i++ ) {
         bitmap[i] = 255;
     }
-    bitmap[0] = 254;
+    // bitmap[2023] = 247;
     pos = get_free_block_num_from_bitmap(bitmap);
-    printf("pos: %d\n", pos);
+    printf("pos: %d\n", pos);   // 1111 0111
 
     return 0;
 }
@@ -45,17 +45,17 @@ int main () {
     return the number of the free data block.
     If there is no data block, return -1.
 */
-int get_free_block_num_from_bitmap(char* map) {
+int get_free_block_num_from_bitmap(unsigned char* map) {
     // map: char bitmap[BITMAP_SIZE*BLOCK_SIZE]; 8192 bits in all
     // the first 7931 blocks are usable
-    printf("map length: %d\n", strlen(map));
+
     // find the first 0 bit in bit map
     int i;
     int free_byte_pos;
-    char free_byte;
+    unsigned char free_byte;
     // iterate bit map byte by byte
     for ( i = 0; i < /*BITMAP_SIZE*BLOCK_SIZE*/1024; i++ ) {
-        char ch = map[i];
+        unsigned char ch = map[i];
         if ( ch != 255 )  {
             free_byte_pos = i;
             free_byte = map[i];
@@ -67,17 +67,18 @@ int get_free_block_num_from_bitmap(char* map) {
     if ( i == /*BITMAP_SIZE*BLOCK_SIZE*/1024 ) {
         return -1;
     }
-    printf("byte i=%d", i);
+    // printf("byte i=%d\n", free_byte);
+    // printf("free_byte_pos=%d\n", free_byte_pos);
     // iterate a byte bit by bit
     int free_bit;
     for ( i = 0, free_bit = free_byte_pos * 8; i < 8; i++ ) {
-        if ( (free_byte & 1 ) == 0 ) {
+        if ( (free_byte & (unsigned char)1 ) == 0 ) {
             free_bit += i;
-            free_byte = free_byte >> 1;
             break;
         }
+        free_byte = free_byte >> 1;
     }
-
+    // printf("free_bit: %d\n", free_bit);
     // check it out whether it is greater than 7931-1
     if ( free_bit >= 7931 ) {
         return -1;
