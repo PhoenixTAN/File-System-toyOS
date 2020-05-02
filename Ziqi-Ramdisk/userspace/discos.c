@@ -87,7 +87,7 @@ int rd_mkdir(char* pathname) {
 	// printf("pwd: %s\n", pwd);
 	int cur_dir_node;
 	printf("Cur_dir_node: %d", cur_dir_node);
-	cur_dir_node = get_cur_dir_node(pathname);
+	cur_dir_node = find_node_number(pathname);
 	// printf("cur_node: %d\n", cur_dir_node);
 	free(pwd);
 	free(filename);
@@ -165,7 +165,7 @@ int find_node_number(char* pathname) {
 						break;
 					}
 				}
-				if(cur_node_num)
+				// if(cur_node_num)
 			}
 		}
 		// if(cur_node_num != 0) {
@@ -192,6 +192,17 @@ int find_node_number(char* pathname) {
 	}
 	free(temp_pathname);
 	return -1;
+}
+
+int get_free_inode() {
+    int i;
+    for(i = 0; i < MAX_NUM_FILE; i++) {
+        inode_struct temp_inode = discos->inodes[i];
+        if(strcmp(temp_inode.type, "")==0) {
+            return i;
+        }
+    }
+    return -1;
 }
 
 
