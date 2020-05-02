@@ -15,70 +15,92 @@
 #define MAX_NUM_FILE            1023    
 #define MAX_FILE_SIZE           1067008 // in bytes      
 #define INODE_NUM_DIRECT_PTR    8
+#define DATA_BLOCKS_NUM         7931    
 
+typedef unsigned short uint16_t;
+typedef unsigned int uint32_t;
 
-
-typedef struct DIR {
-	char name[14];
-	unsigned short inode_num;
-} dir_entry_t;
-// padding: __attribute__((packed))
-
-
-typedef union DATA_BLOCK {
-	char data[BLOCK_SIZE];
-	dir_entry_t entries[BLOCK_SIZE/16];
-} data_block;
-
+/* Data structure for file system */
 
 /* super block */
 typedef struct SUPERBLOCK {
-    unsigned int free_blocks;   // 4 bytes
-    unsigned int free_inodes;   // 4 bytes
+    uint32_t free_blocks;   // 4 bytes
+    uint32_t free_inodes;   // 4 bytes
     
     char padding[248];         // 256 - 4 - 4
 
-} superblock;
+} superblock_struct;
 
 
+/* directory entry */
+typedef struct DIR_ENTRY {
+	char name[14];              // filename or directory name
+	uint16_t inode_num;   // the corresponding inode 2 bytes
+} dir_entry_struct;
+
+
+/* A data block: dir, reg files & index blocks */
+typedef union DATA_BLOCK {
+	char data[BLOCK_SIZE];
+	dir_entry_struct entries[BLOCK_SIZE/sizeof(dir_entry_struct)];
+} data_block_struct;
+
+
+/* single indirect block pointer */
 typedef struct SINGLE_INDIRECT {
-    // index block belons to data block
-    // 改
-} single_indirect;
+    // index block belongs to data block
+    data_block_struct *index_blocks[BLOCK_SIZE/4];     // 4 bytes = sizeof(pointer)
+} single_indirect_struct;
 
 
+/* single indirect block pointer */
 typedef struct DOUBLE_INDIRECT {
-    
-} double_indirect;
+    single_indirect_struct *index_blocks[BLOCK_SIZE/4];    
+} double_indirect_struct;
 
 
 /* i node */
 typedef struct I_NODE {
-    unsigned int type;      // either “dir” or “reg” (4 bytes)
-    unsigned int size;      // current file size in bytes (4 bytes)
+    char type[4];      // either “dir” or “reg” (4 bytes)
+    uint32_t size;      // current file size in bytes (4 bytes)
 
-    unsigned int pointers[INODE_NUM_DIRECT_PTR];       // 8 direct block pointer
+    data_block_struct *pointers[INODE_NUM_DIRECT_PTR];       // 8 direct block pointer
     
-    single_indirect *single_indirect_ptrs;   // 4 bytes
-    double_indirect *double_indrect_ptrs;    // 4 bytes
+    single_indirect_struct *single_indirect_ptrs;   // 4 bytes
+    double_indirect_struct *double_indrect_ptrs;    // 4 bytes
 
-    unsigned int access;    // 4 bytes
+    uint32_t access;    // 4 bytes
 
-    // padding
+    char padding[12];
 
-} i_node;
-
-
+} inode_struct;
 
 
-/* bit map */
+
+/* file system */
+typedef struct FILESYS {
+    // 1 block
+    superblock_struct superblock;
+
+    // 256 blocks
+    // 256*256/64
+    inode_struct inodes[INODE_ARRAY_SIZE*BLOCK_SIZE/INODE_SIZE];
+
+    // 4 blocks
+    // 1 byte * 4 * 256 = 1024 bytes -> 1024 * 8 bit
+    // 7931 blocks data blocks, 8192 blocks in all
+    char bitmap[BITMAP_SIZE*BLOCK_SIZE]; 
+
+    // 7931 blocks
+    data_block_struct data_blocks[DATA_BLOCKS_NUM];
+
+} filesys_struct;
 
 
 /* file descriptor table*/
 
 /* file object */
 
-/* */
 
 /* Files Operations */
 

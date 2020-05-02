@@ -28,9 +28,14 @@ int main(void) {
 	// kmalloc()
 
 	/* Data structure check */
-	printf("");
-	printf("dir entry t %d\n", sizeof(dir_entry_t));
-	printf("block %d\n", sizeof(block));
+	printf("superblock %d\n", sizeof(superblock_struct));
+	printf("dir entry %d\n", sizeof(dir_entry_struct));
+	printf("data block %d\n", sizeof(data_block_struct));
+	printf("single_indirect %d\n", sizeof(single_indirect_struct));
+	printf("double_indirect %d\n", sizeof(double_indirect_struct));
+	printf("inode %d\n", sizeof(inode_struct));
+	printf("filesys %d\n", sizeof(filesys_struct));
+	
 	return 0;
 }
 
