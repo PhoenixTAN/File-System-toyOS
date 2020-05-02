@@ -62,20 +62,47 @@ int init_file_sys() {
 	discos->superblock.free_inodes = MAX_NUM_FILE;
 	retval = rd_mkdir("/");
 	retval = rd_mkdir("/");
+	retval = rd_mkdir("/abc/edf");
+	retval = rd_mkdir("/abc");
 	return retval;
 }
 
 int rd_mkdir(char* pathname) {
+	char* pwd;
+	char* filename;
+	int len = strlen(pathname);
+	pwd = malloc(len);
+	filename = malloc(len);
 	if(strcmp(pathname, "/") == 0 && discos->superblock.free_inodes == MAX_NUM_FILE) {
 		printf("init root dir\n");
 		discos->superblock.free_inodes--;
 		return 0;
 	}
 	if(strcmp(pathname, "/") == 0 && discos->superblock.free_inodes != MAX_NUM_FILE) {
-		printf("root dir exist!");
+		printf("root dir exist!\n");
 		return -1;
 	}
+	parse_absolute_path(pathname, pwd, filename);
 	
+	free(pwd);
+	free(filename);
+	return 0;
+}
+
+void parse_absolute_path(char* _path, char* _current_dir, char* filename) {
+	//absolute path, current category, file name
+	int i;
+	int len = strlen(_path);
+	for(i = len - 1; i >= 0; i--) {
+		if(_path[i] == '/' && i != 0) {
+			strncpy(_current_dir, _path, i);
+			break;
+		}
+		else if(_path[i] == '/' && i == 0) {
+			strcpy(_current_dir, "/\0");
+		}
+	}
+	strcpy(filename, &_path[i + 1]);
 }
 /**
  * int rd_creat(char *pathname, mode_t mode)

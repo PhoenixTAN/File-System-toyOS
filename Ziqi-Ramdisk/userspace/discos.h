@@ -98,6 +98,7 @@ typedef struct FILESYS {
 
 int init_file_sys();
 int rd_mkdir(char* pathname);
+void parse_absolute_path(char* _path, char* _current_dir, char* _target);
 
 
 /* file descriptor table*/
