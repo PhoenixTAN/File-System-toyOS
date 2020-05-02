@@ -1,13 +1,13 @@
-#include "ramdisk.h"
+#include "discos.h"
 
 
 void cmd_daemon() {
-	char cmd[CMD_MAX_LENGTH] = "Hello Ramdisk!\n";
+	char cmd[CMD_MAX_LENGTH] = "Hello Discos!\n";
 
 	printf("%s", cmd);
 
 	while ( 1 ) {
-		printf("Ramdisk# ");
+		printf("Discos# ");
 
 		fgets(cmd, CMD_MAX_LENGTH, stdin);	// char* _Buffer, int   _MaxCount, FILE* _Stream
 		cmd[strlen(cmd)-1] = '\0';
@@ -24,10 +24,10 @@ void cmd_daemon() {
 int main(void) {
 
 	// cmd_daemon();
-	
+	printf("\n\n\n Discos ##########\n");
 	// kmalloc()
 
-	/* Data structure check */
+	/* Data structure size check */
 	printf("superblock %d\n", sizeof(superblock_struct));
 	printf("dir entry %d\n", sizeof(dir_entry_struct));
 	printf("data block %d\n", sizeof(data_block_struct));
@@ -35,7 +35,18 @@ int main(void) {
 	printf("double_indirect %d\n", sizeof(double_indirect_struct));
 	printf("inode %d\n", sizeof(inode_struct));
 	printf("filesys %d\n", sizeof(filesys_struct));
-	
+
+	/* malloc for Discos 2MB */
+	filesys_struct *discos = (filesys_struct*)malloc(sizeof(filesys_struct));
+	if ( !discos ) {
+		printf("discos malloc fail.\n");
+	}
+	else {
+		printf("discos 2MB created! Enjoy!\n");
+	}
+
+	free(discos);
+
 	return 0;
 }
 
