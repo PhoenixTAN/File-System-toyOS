@@ -1,5 +1,6 @@
 #include "discos.h"
 
+filesys_struct* discos;
 
 void cmd_daemon() {
 	char cmd[CMD_MAX_LENGTH] = "Hello Discos!\n";
@@ -36,20 +37,46 @@ int main(void) {
 	printf("inode %d\n", sizeof(inode_struct));
 	printf("filesys %d\n", sizeof(filesys_struct));
 
-	/* malloc for Discos 2MB */
-	filesys_struct *discos = (filesys_struct*)malloc(sizeof(filesys_struct));
-	if ( !discos ) {
-		printf("discos malloc fail.\n");
-	}
-	else {
-		printf("discos 2MB created! Enjoy!\n");
-	}
-
+	// /* malloc for Discos 2MB */
+	// filesys_struct *discos = (filesys_struct*)malloc(sizeof(filesys_struct));
+	// if ( !discos ) {
+	// 	printf("discos malloc fail.\n");
+	// }
+	// else {
+	// 	printf("discos 2MB created! Enjoy!\n");
+	// }
+	init_file_sys();
 	free(discos);
 
 	return 0;
 }
 
+int init_file_sys() {
+	int retval;
+	discos = (filesys_struct*)malloc(sizeof(filesys_struct));
+	if ( !discos ) {
+		printf("discos malloc fail.\n");
+		return -1;
+	}
+	discos->superblock.free_blocks = DATA_BLOCKS_NUM;
+	discos->superblock.free_inodes = MAX_NUM_FILE;
+	retval = rd_mkdir("/");
+	retval = rd_mkdir("/");
+	return retval;
+}
+
+int rd_mkdir(char* pathname) {
+	if(strcmp(pathname, "/") == 0 && discos->superblock.free_inodes == MAX_NUM_FILE) {
+		printf("init root dir\n");
+		discos->superblock.free_inodes--;
+		return 0;
+	}
+	if(strcmp(pathname, "/") == 0 && discos->superblock.free_inodes != MAX_NUM_FILE) {
+		printf("root dir exist!");
+		return -1;
+	}
+	
+}
 /**
  * int rd_creat(char *pathname, mode_t mode)
  * 		create a regular file with absolute pathname and mode 
@@ -92,3 +119,26 @@ int main(void) {
  * 								   2. 使用
 */
 
+/**
+ * mkdir:
+ * 创建根目录：
+ * 解析：
+ * 1. 得到要创建的dir name：从后往前找到第一个“/”，将字符串截取两节，第二节是dir name
+ * 2. 处理第一节字符串：默认从根目录开始找，遍历根目录node array的第一个entry（包括一级二级指针）直到找到目标name
+ * 
+ 1. 找到一个inode，占用inode，不占用datablock，也不需要记录根目录的名称，因为根目录在全局是唯一的。
+ 2. 在根目录下mkdir, 找到根目录的inode，在inode中将data block ptr分配给free的data block
+ ，这个datablock用dir_entry装，name[14]装名字
+
+
+
+在根目录创建文件，找到根目录inode，根目录inode直接指针指向一个free_block，
+占用这个free_block, name[14]装名字，inode_num指向一个新的inode，
+新inode指向一个新的free data block，并占用这个data block，
+新inode文件size设置成1.
+
+pwd
+ls
+cd 
+cd ..
+ */

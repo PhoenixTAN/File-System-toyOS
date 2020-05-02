@@ -1,4 +1,4 @@
 all:
-	gcc -Wall ramdisk.c -o ramdisk
+	gcc -Wall discos.c -o discos
 clean:
-	rm ramdisk
+	rm discos

@@ -12,7 +12,7 @@
 #define INODE_SIZE              64      // in bytes
 #define INODE_ARRAY_SIZE        256     // in blocks
 #define BITMAP_SIZE             4       // in blocks
-#define MAX_NUM_FILE            1023    
+#define MAX_NUM_FILE            1024  
 #define MAX_FILE_SIZE           1067008 // in bytes      
 #define INODE_NUM_DIRECT_PTR    8
 #define DATA_BLOCKS_NUM         7931    
@@ -35,7 +35,7 @@ typedef struct SUPERBLOCK {
 /* directory entry */
 typedef struct DIR_ENTRY {
 	char name[14];              // filename or directory name
-	uint16_t inode_num;   // the corresponding inode 2 bytes
+	uint16_t inode_num;   // the corresponding inode index 2 bytes
 } dir_entry_struct;
 
 
@@ -95,6 +95,9 @@ typedef struct FILESYS {
     data_block_struct data_blocks[DATA_BLOCKS_NUM];
 
 } filesys_struct;
+
+int init_file_sys();
+int rd_mkdir(char* pathname);
 
 
 /* file descriptor table*/
