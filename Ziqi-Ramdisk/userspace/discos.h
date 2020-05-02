@@ -19,6 +19,7 @@
 
 typedef unsigned short uint16_t;
 typedef unsigned int uint32_t;
+typedef union DATA_BLOCK data_block_struct;
 
 /* Data structure for file system */
 
@@ -40,10 +41,11 @@ typedef struct DIR_ENTRY {
 
 
 /* A data block: dir, reg files & index blocks */
-typedef union DATA_BLOCK {
-	char data[BLOCK_SIZE];
-	dir_entry_struct entries[BLOCK_SIZE/sizeof(dir_entry_struct)];
-} data_block_struct;
+union DATA_BLOCK {
+    char data[BLOCK_SIZE];
+    dir_entry_struct entries[BLOCK_SIZE/sizeof(dir_entry_struct)];
+    data_block_struct* index_block[BLOCK_SIZE/4];    // 4 bytes = sizeof(pointer)
+};
 
 
 /* single indirect block pointer */
@@ -66,8 +68,8 @@ typedef struct I_NODE {
 
     data_block_struct *pointers[INODE_NUM_DIRECT_PTR];       // 8 direct block pointer
     
-    single_indirect_struct *single_indirect_ptrs;   // 4 bytes
-    double_indirect_struct *double_indrect_ptrs;    // 4 bytes
+    data_block_struct *single_indirect_ptrs;   // 4 bytes
+    data_block_struct *double_indrect_ptrs;    // 4 bytes
 
     uint32_t access;    // 4 bytes
 
@@ -99,7 +101,8 @@ typedef struct FILESYS {
 int init_file_sys();
 int rd_mkdir(char* pathname);
 void parse_absolute_path(char* _path, char* _current_dir, char* _target);
-
+int get_cur_dir_node(char* _current_dir);
+int create_file(char* filename, char* type, int cur_node_num);
 
 /* file descriptor table*/
 

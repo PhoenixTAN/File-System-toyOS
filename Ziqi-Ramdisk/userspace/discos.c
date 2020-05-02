@@ -62,8 +62,8 @@ int init_file_sys() {
 	discos->superblock.free_inodes = MAX_NUM_FILE;
 	retval = rd_mkdir("/");
 	retval = rd_mkdir("/");
-	retval = rd_mkdir("/abc/edf");
-	retval = rd_mkdir("/abc");
+	// retval = rd_mkdir("/abc");
+	retval = rd_mkdir("/abc/edf/ghi");
 	return retval;
 }
 
@@ -83,7 +83,17 @@ int rd_mkdir(char* pathname) {
 		return -1;
 	}
 	parse_absolute_path(pathname, pwd, filename);
-	
+	printf("pwd: %s\n", pwd);
+	int cur_dir_node;
+	printf("Cur_dir_node: %d", cur_dir_node);
+	cur_dir_node = get_cur_dir_node(pwd);
+	if(cur_dir_node == 0) {
+		printf("No such file");
+		free(pwd);
+		free(filename);
+		return -1;
+	}
+	// printf("cur_node: %d\n", cur_dir_node);
 	free(pwd);
 	free(filename);
 	return 0;
@@ -103,6 +113,83 @@ void parse_absolute_path(char* _path, char* _current_dir, char* filename) {
 		}
 	}
 	strcpy(filename, &_path[i + 1]);
+}
+
+int get_cur_dir_node(char* pathname) {
+	const char* delim = "/";
+	char* temp_pathname;
+	temp_pathname = malloc(strlen(pathname));
+	strcpy(temp_pathname, pathname);
+	char* split_string = strtok(temp_pathname, delim);
+	int cur_node_num = 0;
+	data_block_struct* cur_data_block;
+	while(split_string) {
+		printf("%s\n", split_string);
+		int i;
+		//directory entry
+		for(i = 0; i < INODE_NUM_DIRECT_PTR; i++) {
+			cur_data_block = discos->inodes[cur_node_num].pointers[i];
+			if(cur_data_block == NULL) {
+				printf("Null Ptr!");
+				return -1;
+			}
+			int j;
+			for(j = 0; j < BLOCK_SIZE/sizeof(dir_entry_struct); j++) {
+				if(strcmp(cur_data_block->entries[j].name, split_string) == 0) {
+					cur_node_num = cur_data_block->entries->inode_num;
+					break;
+				}
+			}
+			if(cur_node_num != 0) {
+				break;
+			}
+		}
+		if(cur_node_num != 0) {
+			continue;
+		}
+		// //single directory entry
+		// for(i = 0; i < BLOCK_SIZE/4; i++) {
+		// 	int j;
+		// 	cur_data_block = discos->inodes[cur_node_num].single_indirect_ptrs;
+		// 	for(j = 0; j < BLOCK_SIZE/4; j++) {
+		// 		int k;
+		// 		for(k=0; k < BLOCK_SIZE/sizeof(dir_entry_struct); k++) {
+		// 			if(strcmp(cur_data_block->index_block[j]->entries[k].name, split_string) == 0) {
+		// 				cur_node_num = cur_data_block->index_block[j]->entries[k].inode_num;
+		// 			}
+		// 		}
+		// 	}
+		// }
+		// if(cur_node_num != 0) {
+		// 	continue;
+		// }
+		// //double directory entry
+		// for(i = 0; i < BLOCK_SIZE/4; i++) {
+		// 	int j;
+		// 	cur_data_block = discos->inodes[cur_node_num].double_indrect_ptrs;
+		// 	for(j = 0; j < BLOCK_SIZE/4; j++) {
+		// 		int k;
+		// 		for(k = 0; k < BLOCK_SIZE/4; k++) {
+		// 			int l;
+		// 			for(l = 0; l < BLOCK_SIZE/sizeof(dir_entry_struct); l++) {
+		// 				if(strcmp(cur_data_block->index_block[j]->index_block[k]->entries[l].name, split_string) == 0) {
+		// 					cur_node_num = cur_data_block->index_block[j]->index_block[k]->entries[l].inode_num;
+		// 				}
+		// 			}
+		// 		}
+		// 	}
+		// }
+		split_string = strtok(NULL,split_string);
+		continue;
+	}
+	free(temp_pathname);
+	return cur_node_num;
+}
+
+//create file or directory
+int create_file(char* filename, char* type, int cur_node_num) {
+	inode_struct cur_inode = discos->inodes[cur_node_num];
+	
 }
 /**
  * int rd_creat(char *pathname, mode_t mode)
