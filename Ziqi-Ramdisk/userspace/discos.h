@@ -108,10 +108,13 @@ dir_entry_struct* get_next_dir_entry(data_block_struct* block);
 dir_entry_struct* get_next_entry(inode_struct* node);
 dir_entry_struct* get_next_dir_entry_single(data_block_struct* index_block, int _segment);
 dir_entry_struct* get_next_dir_entry_double(data_block_struct* index_block, int _segment);
-
+void clear_inode_single_indirect(data_block_struct* single_indirect);
+void clear_inode_double_indirect(data_block_struct* double_indirect);
 
 /* file operations */
 int rd_mkdir(char* pathname);
 int rd_create(char *pathname, char* type, int mode);
+int rd_unlink(char *pathname);
+
 
 #endif // !RAMDISK_H

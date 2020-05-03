@@ -14,11 +14,11 @@ cd
 */
 
 /* Macro from test file */
-// #define TEST1
+#define TEST1
 // #define TEST2
 // #define TEST3
 // #define TEST4
-#define TEST5
+// #define TEST5
 // #define TEST6
 
 #define PATH_PREFIX ""
@@ -79,7 +79,7 @@ int main(void) {
     /* ****TEST 1: MAXIMUM file creation**** */
 
     /* Generate MAXIMUM regular files */
-    for ( i = 0; i < MAX_NUM_FILE - 1; i++ ) { 
+    /*for ( i = 0; i < MAX_NUM_FILE - 1; i++ ) { 
         sprintf (pathname, PATH_PREFIX "/file%d", i);
     
         retval = CREAT (pathname, "reg\0", RD);
@@ -93,12 +93,29 @@ int main(void) {
         }
     
         memset (pathname, 0, 80);
-    }   
-
-    /* Delete all the files created */
-    /*for (i = 0; i < MAX_FILES; i++) { 
+    }   */
+    for ( i = 0; i < 129 - 1; i++ ) { 
         sprintf (pathname, PATH_PREFIX "/file%d", i);
     
+        retval = CREAT (pathname, "reg\0", RD);
+    
+        if (retval < 0) {
+            fprintf (stderr, "creat: File creation error! status: %d (%s)\n", retval, pathname);
+            perror("Error!");
+      
+            if (i != 129 - 1)
+	            exit(EXIT_FAILURE);
+        }
+    
+        memset (pathname, 0, 80);
+    }   
+    printf("<1> Test 1 created 1023 files succeeded!\n\n");
+    print_bitmap(discos->bitmap);
+    /* Delete all the files created */
+    /*for (i = 0; i < MAX_NUM_FILE - 1; i++) { 
+        
+        sprintf (pathname, PATH_PREFIX "/file%d", i);
+
         retval = UNLINK (pathname);
     
         if (retval < 0) {
@@ -108,8 +125,8 @@ int main(void) {
         }
     
         memset (pathname, 0, 80);
-    }*/
-    printf("<1> Test 1 pass!\n\n");
+    }
+    printf("<1> Test 1 pass!\n\n");*/
     #endif // TEST1
 
     #ifdef TEST5
@@ -233,7 +250,13 @@ int init_file_sys() {
 	return retval;
 }
 
-
+/**
+ * mkdir
+ * This behaves like rd_creat() but pathname refers to a directory file. 
+ * If the file already exists, return -1 else return 0. 
+ * Note that you need to update the parent directory file, to include the new entry.
+ * 
+*/
 int rd_mkdir(char* pathname) {
 	char* pwd;
 	char* filename;
@@ -294,11 +317,11 @@ int find_inode_number(char* pathname) {
     char* temp_pathname;
 	temp_pathname = malloc(strlen(pathname));
 	strcpy(temp_pathname, pathname);
-    printf("deep copy path: %s\n", temp_pathname);
+    // printf("deep copy path: %s\n", temp_pathname);
 	
     char* split_string = strtok(temp_pathname, delim);
-    printf("delete the first delim temp_pathname: %s\n", temp_pathname);
-    printf("delete the first delim split_string: %s\n", split_string);
+    // printf("delete the first delim temp_pathname: %s\n", temp_pathname);
+    // printf("delete the first delim split_string: %s\n", split_string);
 
     if ( split_string == NULL ) {
         return 0;
@@ -318,7 +341,7 @@ int find_inode_number(char* pathname) {
 		    cur_data_block = discos->inodes[cur_node_num].pointers[i];
 			// if cur_data_block is null, return cur_node_number, pathname = pathname
             if ( cur_data_block != NULL ) {
-                printf("cur_data_block != NULL\n");
+                // printf("cur_data_block != NULL\n");
                 int j;
                 for ( j = 0; j < BLOCK_SIZE/sizeof(dir_entry_struct); j++ ) {
                     dir_entry_struct* entry = &cur_data_block->entries[j];
@@ -374,7 +397,6 @@ int find_inode_number(char* pathname) {
                 }
             }
         }		
-
 
         if ( cur_node_num != pre_node_num ) {
 			pre_node_num = cur_node_num;
@@ -528,7 +550,16 @@ data_block_struct* allocate_data_block( int free_block_number ) {
 
 
 
-/* create file or directory */
+/** 
+ * create file or directory 
+ * create a regular file with absolute pathname and mode from the root of the directory tree, 
+ * where each directory filename is delimited by a "/" character. 
+ * The mode can be read-write (default), read-only, or write-only. 
+ * You can assume that any process opening an existing file is restricted by the access rights at creation time. 
+ * On success, you should return 0, 
+ * else if the file corresponding to pathname already exists you should return -1, indicating an error. 
+ * Note that you need to update the parent directory file, to include the new entry.
+ * */
 int rd_create(char *pathname, char* type, int mode) {
     
     printf("Creating file/directory ...\n");
@@ -542,8 +573,7 @@ int rd_create(char *pathname, char* type, int mode) {
         printf("File/Directory failed: not enough free blocks.\n");
         return -1;
     }
-
-    
+   
     // find the current directory
     // get the file/directory name you want to create
     char *current_path = malloc(strlen(pathname));
@@ -564,7 +594,6 @@ int rd_create(char *pathname, char* type, int mode) {
     dir_entry_struct* free_dir_entry = get_next_entry(current_path_inode);
     if ( free_dir_entry == NULL ) {
         printf("No free entry!\n");
-        // 如果后面继续遍历间接指针 也没有，就说明已经到最大entry数目
         return -1;
     }
 
@@ -591,6 +620,7 @@ int rd_create(char *pathname, char* type, int mode) {
     
     return 0;
 }
+
 
 /* get_next_dir_entry in direct block*/
 dir_entry_struct* get_next_dir_entry(data_block_struct* block) {
@@ -631,6 +661,7 @@ dir_entry_struct* get_next_dir_entry_single(data_block_struct* index_block, int 
 
     return get_next_dir_entry(block);
 }
+
 
 dir_entry_struct* get_next_dir_entry_double(data_block_struct* index_block, int _segment) {
 
@@ -761,4 +792,210 @@ dir_entry_struct* get_next_entry(inode_struct* node) {
 }
 
 
+/* clear inode, free datablocks */
+void clear_inode(inode_struct* inode) {
+
+	data_block_struct* temp_block_ptr;
+	int i;
+	for ( i = 0; i < INODE_NUM_DIRECT_PTR; i++ ) {
+		temp_block_ptr = inode->pointers[i];
+		if ( temp_block_ptr != NULL ) {
+			// use pointer substraction to get the number of the target block
+			clear_bitmap(discos->bitmap, temp_block_ptr - &discos->data_blocks[0]);
+			memset(inode->pointers[i], 0, BLOCK_SIZE);
+			discos->superblock.free_blocks++;
+		}
+	}
+
+    printf("Here!\n");
+
+	if ( inode->single_indirect_ptrs != NULL ) {
+		clear_inode_single_indirect(inode->single_indirect_ptrs);
+	}
+
+	if ( inode->double_indirect_ptrs != NULL ) {
+		clear_inode_double_indirect(inode->double_indirect_ptrs);
+	}
+
+}
+
+
+/* helper function for clear_inode */
+void clear_inode_single_indirect(data_block_struct* single_indirect) {
+    printf("clear_inode_single_indirect.\n");
+	int i;
+	for ( i = 0; i < BLOCK_SIZE/4; i++ ) {
+		data_block_struct* block = single_indirect->index_block[i];
+		if (  block != NULL ) {	
+			clear_bitmap(discos->bitmap, block - &discos->data_blocks[0]);
+			memset(single_indirect->index_block[i], 0, BLOCK_SIZE);
+			discos->superblock.free_blocks++;
+		}
+	}
+
+	// clear the single indirect index_block[] itself
+	clear_bitmap(discos->bitmap, single_indirect - &discos->data_blocks[0]);
+	memset(single_indirect, 0, BLOCK_SIZE);
+	discos->superblock.free_blocks++;
+}
+
+
+/* helper function for clear_inode */
+void clear_inode_double_indirect(data_block_struct* double_indirect) {
+	int i;
+	for ( i = 0; i < BLOCK_SIZE/4; i++ ) {
+		data_block_struct* single_indirect = double_indirect->index_block[i];
+		if ( single_indirect != NULL ) {
+			clear_inode_single_indirect(single_indirect);
+		}
+	}
+	clear_bitmap(discos->bitmap, double_indirect - &discos->data_blocks[0]);
+	memset(double_indirect, 0, BLOCK_SIZE);
+	discos->superblock.free_blocks++;
+}
+
+
+/* find the entry name "filename" in the current directory inode */
+dir_entry_struct* find_entry_in_current_dir(inode_struct* cur_dir_inode, char* filename) {
+
+	dir_entry_struct* entry;
+	int i;
+	for ( i = 0; i < INODE_NUM_DIRECT_PTR; i++ ) {
+		data_block_struct* block = cur_dir_inode->pointers[i];
+		if ( block != NULL ) {
+			// iterate the block to find the entry
+			int j;
+			for ( j = 0; j < BLOCK_SIZE/16; j++ ) {
+				entry = &block->entries[j];
+                if ( entry != NULL && strcmp(entry->name, filename) == 0 ) {
+                    return entry;
+                }
+			}
+
+		}
+	}
+
+    // find entry in single indirect
+    data_block_struct* single_indirect = cur_dir_inode->single_indirect_ptrs;
+    if ( single_indirect != NULL ) {
+        for ( i = 0; i < BLOCK_SIZE/4; i++ ) {
+            data_block_struct* block = single_indirect->index_block[i];
+            if ( block != NULL ) {
+                int j;
+                for ( j = 0; j < BLOCK_SIZE/16; j++ ) {
+                    entry = &block->entries[j];
+                    if ( entry != NULL && strcmp(entry->name, filename) == 0 ) {
+                        return entry;
+                    }
+                }
+            }
+        }
+    }
+
+    // find entry in double indirect
+    data_block_struct* double_indirect = cur_dir_inode->double_indirect_ptrs;
+    if ( double_indirect != NULL ) {
+        // iterate single indirect
+        for ( i = 0; i < BLOCK_SIZE/4; i++ ) {
+            data_block_struct* single = double_indirect->index_block[i];
+            if ( single != NULL ) {
+                int j;
+                for ( j = 0; j < BLOCK_SIZE/4; j++ ) {
+                    data_block_struct* block = single->index_block[j];
+                    if ( block != NULL ) {
+                        int k;
+                        for ( k = 0; k < BLOCK_SIZE/16; k++ ) {
+                            entry = &block->entries[k];
+                            if ( entry != NULL && strcmp(entry->name, filename) == 0 ) {
+                                return entry;
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+	return NULL;
+}
+
+
+
+/**
+ * rd_unlink
+ * remove the filename with absolute pathname from the filesystem, 
+ * freeing its memory in the ramdisk. 
+ * This function returns 0 if successful or -1 if there is an error. 
+ * An error can occur if: 
+ * 		(1) the pathname does not exist, 
+ * 		(2) you attempt to unlink a non-empty directory file, 
+ * 		(3) you attempt to unlink an open file, or 
+ * 		(4) you attempt to unlink the root directory file.
+*/
+int rd_unlink(char* _pathname) {
+	// deep copy the path name
+	char* pathname = malloc(strlen(_pathname));
+    strcpy(pathname, _pathname);
+
+	// error occurs if you attempt to unlink the root directory file.
+	if ( strcmp(pathname, "/") == 0 ) {
+		printf("<1> rd_unlink Error occurs: you attempt to unlink the root dir.\n");
+		return -1;
+	}
+
+	// error occurs if you attempt to unlink an open file
+	// TODO:
+
+	// error occurs if the pathname does not exist
+	int file_inode_num = find_inode_number(pathname);
+	if ( file_inode_num == -1 ) {
+		printf("<1> rd_unlink Error occurs: the pathname does not exist.\n");
+		return -1;
+	}
+	inode_struct* file_inode = &discos->inodes[file_inode_num];
+	
+	// error occurs if you attempt to unlink a non-empty directory file
+	if ( strcmp(file_inode->type, "dir\0") == 0 ) {
+		// check whether this is a non-empty folder
+		// 这里要什么复杂的操作吗
+		if ( file_inode->size > 0 ) {
+			printf("<1> rd_unlink Error occurs: you attempt to unlink the root dir.\n");
+			return -1;
+		}
+	}
+
+	char* current_dir = malloc(strlen(pathname));
+	char* filename = malloc(strlen(pathname));
+	parse_absolute_path(pathname, current_dir, filename);
+
+	int current_dir_inode_num = find_inode_number(current_dir);
+	if ( current_dir_inode_num == -1 ) {
+		printf("<1> rd_unlink Error occurs: cannot find current dir.\n");
+		return -1;
+	}
+	inode_struct* cur_dir_inode = &discos->inodes[current_dir_inode_num];
+
+	// clear inode, clear blocks, clear bitmap, update free block number in superblock
+    printf("Clearing inode...\n");
+	clear_inode(file_inode);
+
+	// update the info in current dir inode
+	// find file entry from the current directory
+	dir_entry_struct* entry_in_cur_dir = find_entry_in_current_dir(cur_dir_inode, filename);
+	memset(entry_in_cur_dir, 0, sizeof(dir_entry_struct));
+	cur_dir_inode->size -= 16;
+
+	// free inode ++
+	memset(file_inode, 0 , sizeof(inode_struct));
+	discos->superblock.free_inodes++;
+
+
+	free(current_dir);
+	free(filename);
+
+    printf("Unlink success! %s\n", pathname);
+
+	return 0;
+
+}
 
