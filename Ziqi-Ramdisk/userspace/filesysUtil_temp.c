@@ -180,7 +180,7 @@ int rd_mkdir(char* pathname) {
 
 
 void parse_absolute_path(char* _path, char* _current_dir, char* filename) {
-	// absolute path, current category, file name
+	//absolute path, current category, file name
 	int i;
 	int len = strlen(_path);
 	for ( i = len - 1; i >= 0; i-- ) {
@@ -195,7 +195,7 @@ void parse_absolute_path(char* _path, char* _current_dir, char* filename) {
 		}
 	}
     // char * strcpy ( char * destination, const char * source );
-	strcpy(filename, &_path[i + 1]);
+	strcpy(filename, &_path[i + 1]);  
 }
 
 /*
@@ -327,76 +327,33 @@ int set_bitmap(unsigned char* map, int index) {
     return 0;
 }   
 
+dir_entry_struct* get_next_free_dir_entry(inode_struct* node) {
+    int i;
+    for(i = 0; i < INODE_NUM_DIRECT_PTR; i++) {
+        data_block_struct* dir_ptr = node->pointers[i];
+        int j;
+        // directory entry
+        for(j = 0; j < BLOCK_SIZE/sizeof(dir_entry_struct); j++) {
+            if(strcmp(dir_ptr->entries[i].name, "") == 0) {
+                return &(dir_ptr->entries[i]);
+            }
+        }
+    }
+     return NULL;
+}
+
+
 
 // get free inode
 int get_free_inode() {
-    int i;
-    for(i = 0; i < MAX_NUM_FILE; i++) {
-        inode_struct temp_inode = discos->inodes[i];
-        if(strcmp(temp_inode.type, "")==0) {
-            return i;
-        }
-    }
+
+
     return -1;
-}
-
-/* */
-dir_entry_struct* get_next_free_dir_entry(inode_struct* node) {
-
-    return NULL;
 }
 
 /* create file or directory */
 int rd_create(char *pathname, char* type, int mode) {
+    
 
-    printf("Creating file/directory ...\n");
-
-    if ( discos->superblock.free_inodes <= 0 ) {
-        printf("File/Directory failed: not enough free inodes.\n");
-        return -1;
-    }
-
-    if ( discos->superblock.free_blocks <= 0 ) {
-        printf("File/Directory failed: not enough free blocks.\n");
-        return -1;
-    }
-
-    int free_inode_num = get_free_inode();
-    if ( free_inode_num == -1 ) {
-        printf("File/Directory failed: cannot find free inodes.\n");
-        return -1;
-    }
-    inode_struct* free_inode = &discos->inodes[free_inode_num];
-/*
-    int free_block_num = get_free_block_num_from_bitmap(discos->bitmap);
-    if ( free_block_num == -1 ) {
-        printf("File/Directory failed: cannot find free blocks.\n");
-        return -1;
-    }
-    dir_entry_struct* free_dir_entry = &discos->data_blocks[free_block_num];
-*/
-    // find the current directory
-    // get the file/directory name you want to create
-    char *current_path = malloc(strlen(pathname));
-    char *entry_name = malloc(strlen(pathname));
-    parse_absolute_path(pathname, current_path, entry_name);
-    printf("parse: current path: %s    entry_name: %s\n", current_path, entry_name);
-
-    // find the inode of the current directory
-    int cur_inode_num = find_inode_number(current_path);
-    if ( cur_inode_num == -1 ) {
-        printf("Cannot find such a directory.\n");
-        return -1;
-    }
-
-    inode_struct* current_path_inode = &discos->inodes[cur_inode_num];
-
-    // find the next free entry in current directory
-
-    // if there is no more free entry, get a new block.
-
-
-
-    return 0;
+    
 }
-
