@@ -50,8 +50,6 @@ int main(void) {
 	printf("   superblock %d\n", sizeof(superblock_struct));
 	printf("   dir entry %d\n", sizeof(dir_entry_struct));
 	printf("   data block %d\n", sizeof(data_block_struct));
-	printf("   single_indirect %d\n", sizeof(single_indirect_struct));
-	printf("   double_indirect %d\n", sizeof(double_indirect_struct));
 	printf("   inode %d\n", sizeof(inode_struct));
 	printf("   filesys %d\n", sizeof(filesys_struct));
     
@@ -142,7 +140,7 @@ int main(void) {
     printf("<1> TEST 5 pass!\n\n");
     #endif // TEST5
 
-	
+
 	/* free ramdisk */
 	free(discos);
 
@@ -726,7 +724,6 @@ dir_entry_struct* get_next_entry(inode_struct* node) {
             printf("return free_dir_entry\n");
             return free_dir_entry;
         }
-        /* why seg = 72 */
     }
 
     /* double indrect block */
