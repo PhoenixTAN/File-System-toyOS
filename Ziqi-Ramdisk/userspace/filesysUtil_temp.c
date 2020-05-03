@@ -32,7 +32,8 @@ int main(void) {
     ret = rd_mkdir("/folder1"); 
     ret = rd_mkdir("/folder1/floder2");
     ret = rd_mkdir("/folder1/floder3");
-    // ret = rd_create("/folder1/floder2/Hellooooooooo", "reg\0", 1);
+    ret = rd_mkdir("/folder1/floder3/floder4");
+    ret = rd_create("/folder1/floder2/Hellooooooooo", "reg\0", 1);
     // ret = rd_mkdir("/folderA/folderB"); 
     // ret = rd_mkdir("/folderA/folderB/folderC"); 
 
@@ -306,10 +307,20 @@ int set_bitmap(unsigned char* map, int index) {
     int seg = index / 8;
     int offset = index % 8;
 
-    map[seg] = map[seg] & ( (unsigned char)1 << offset );
+    map[seg] = map[seg] | ( (unsigned char)1 << offset );
     
     return 0;
 }   
+
+
+void print_bitmap (unsigned char* map) {
+    printf("Printing bit map: \n");
+    int i;
+    for ( i = 0; i < 1024; i++ ) {
+        printf("%u ", map[i]);
+    }
+    printf("\n\n");
+}
 
 
 // get free inode
@@ -341,6 +352,7 @@ inode_struct* allocate_inode( int free_inode_num ) {
 data_block_struct* allocate_data_block( int free_block_number ) {
 
     // set the bit map
+    printf("setting bitmap: free_block_number: %d\n", free_block_number);
     set_bitmap(discos->bitmap, free_block_number);
 
     // update super block
@@ -383,7 +395,7 @@ int rd_create(char *pathname, char* type, int mode) {
         printf("Cannot find such a directory.\n");
         return -1;
     }
-
+    printf("find the inode number of current dir: %d\n", cur_inode_num);
     inode_struct* current_path_inode = &discos->inodes[cur_inode_num];
 
     // find the next free entry in current directory
@@ -399,6 +411,7 @@ int rd_create(char *pathname, char* type, int mode) {
         printf("File/Directory failed: cannot find free inodes.\n");
         return -1;
     }
+    printf("get a free inode number: %d\n", free_inode_num);
     inode_struct* free_inode = allocate_inode( free_inode_num );
     
     printf("strcpy entry_name: %s\n", entry_name);
@@ -420,6 +433,7 @@ dir_entry_struct* get_next_dir_entry(data_block_struct* block) {
     int j;
     for ( j = 0; j < BLOCK_SIZE/16; j++ ) {
         if ( block->entries[j].inode_num == 0 ) {
+            printf("get next dir entry: return block->entries[%d]\n", j);
             return &block->entries[j];
         }
     }
@@ -437,13 +451,18 @@ dir_entry_struct* get_next_entry(inode_struct* node) {
         // this block is empty
         if ( dir_ptr == NULL ) {
             printf("We need a new block.\n");
+            print_bitmap(discos->bitmap);
             int free_block_num = get_free_block_num_from_bitmap(discos->bitmap);
             if ( free_block_num == -1 ) {
                  printf("Cannot find free blocks.\n");
                  return NULL;
             }
             // we find a new block
+            printf("free block number: %d, pointers[%d]\n", free_block_num, i);
+
             data_block_struct* new_data_block = allocate_data_block( free_block_num );
+            printf("After allocate datablock: \n");
+            print_bitmap(discos->bitmap);
             node->pointers[i] = new_data_block;
             return &new_data_block->entries[0];
         }
@@ -452,9 +471,9 @@ dir_entry_struct* get_next_entry(inode_struct* node) {
         // then we get the next free entry in this block
         dir_entry_struct* free_dir_entry = get_next_dir_entry(dir_ptr);
         if ( free_dir_entry != NULL ) {
+            printf("return free_dir_entry\n");
             return free_dir_entry;
         }
-
     }
 
     // single indrect
