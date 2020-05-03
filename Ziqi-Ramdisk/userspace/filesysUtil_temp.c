@@ -34,8 +34,7 @@ int main(void) {
     ret = rd_mkdir("/folder1/floder3");
     ret = rd_mkdir("/folder1/floder3/floder4");
     ret = rd_create("/folder1/floder2/Hellooooooooo", "reg\0", 1);
-    // ret = rd_mkdir("/folderA/folderB"); 
-    // ret = rd_mkdir("/folderA/folderB/folderC"); 
+    print_bitmap(discos->bitmap);
 
 	free(discos);
 
@@ -126,32 +125,17 @@ int rd_mkdir(char* pathname) {
 		printf("root dir exist!\n");
 		return -1;
 	}
-	/*parse_absolute_path(pathname, pwd, filename);
-	printf("after parse absolute path: pwd:%s   filename: %s\n", pwd, filename);
-	
-    int cur_dir_node;   // 初始化习惯？为啥输出26，我人傻了
-	// printf("Cur_dir_node: %d\n", cur_dir_node);
-	
-    cur_dir_node = find_inode_number(pwd);
-	printf("Cur_dir_node: %d\n", cur_dir_node);
 
-    if( cur_dir_node == -1 ) {
-		printf("No such file.\n");
-		free(pwd);
-		free(filename);
-		return -1;
-	}
-*/
     /* modify 23:22 */
     int ret = rd_create(pathname, "dir\0", 1);
-    if ( ret == 0 ) {
-        printf("file/directory created successfully!\n");
-    }
-    
-	// printf("cur_node: %d\n", cur_dir_node);
 	free(pwd);
 	free(filename);
-	return 0;
+
+    if ( ret == 0 ) {
+        printf("<1> file/directory created successfully !!!!\n");
+        return 0;
+    }
+	return -1;
 }
 
 
@@ -200,7 +184,7 @@ int find_inode_number(char* pathname) {
 	data_block_struct* cur_data_block;
     // ret = rd_mkdir("/folderA/folderB/folderC"); 
 	while(split_string) {
-		printf("%s\n", split_string);
+		printf("looking for dir: %s\n", split_string);
 		
         int i;
 		// directory entry
@@ -212,13 +196,8 @@ int find_inode_number(char* pathname) {
                 int j;
                 for ( j = 0; j < BLOCK_SIZE/sizeof(dir_entry_struct); j++ ) {
                     dir_entry_struct* entry = &cur_data_block->entries[j];
-                    if ( entry != NULL ) {
-                        printf("entry != NULL\n");
-                        printf("entry->name: %s     split_string: %s\n", entry->name, split_string);
-                    }
                     if ( entry != NULL && strcmp(entry->name, split_string) == 0 ) {
-                        printf("strcmp\n");
-                        cur_node_num = cur_data_block->entries[j].inode_num;
+                        cur_node_num = entry->inode_num;
                         break;
                     }
                 }
@@ -226,52 +205,109 @@ int find_inode_number(char* pathname) {
 
             if ( cur_node_num != pre_node_num ) {
                 // which means we have found the current dir_entry
-                printf("which means we have found the current dir_entry.\n");
+                printf("which means we have found the current dir_entry in direct block.\n");
                 break;
             }
 		}
 
+        // you find the current dir in the direct block
 		if ( cur_node_num != pre_node_num ) {
 			pre_node_num = cur_node_num;
             split_string = strtok(NULL, delim);
-            printf("To be continued ... \n");
+            printf("To be continued 1... \n");
 			continue;   // to find the next level directory
 		}
 
         // we cannot find the dir_entry in the first 8 direct entry
         // directory does not exits
+        /* uncomment return -1 here */
+        // return -1;
+
+		/* try to find current dir in single indirect block */
+        data_block_struct* single_indirect_ptr = &discos->inodes[cur_node_num].single_indirect_ptrs;
+        // NULL pointer exception
+        if ( single_indirect_ptr != NULL ) {
+            for( i = 0; i < BLOCK_SIZE/4; i++ ) {
+                // this data block contains 64 block pointers (see as index_block[] in the data struct)
+                cur_data_block = single_indirect_ptr->index_block[i];   
+                if ( cur_data_block != NULL ) {
+                    int j;
+                    for ( j = 0; j < BLOCK_SIZE/16; j++ ) {
+                        dir_entry_struct* entry = &cur_data_block->entries[j];
+                        if ( entry != NULL && strcmp(entry->name, split_string) == 0 ) {
+                            cur_node_num = entry->inode_num;
+                            printf("Single indirect: i=%dth pointer, j=%dth entry\n", i, j);
+                            break;
+                        }
+                    }
+                }
+                if ( cur_node_num != pre_node_num ) {
+                    // which means we have found the current dir_entry
+                    printf("which means we have found the current dir_entry in the single indrect block.\n");
+                    break;
+                }
+            }
+        }		
+
+
+        if ( cur_node_num != pre_node_num ) {
+			pre_node_num = cur_node_num;
+            split_string = strtok(NULL, delim);
+            printf("To be continued 2... \n");
+			continue;   // to find the next level directory
+		}
+
+        /* try to find current dir in double indirect block */
+        data_block_struct* double_indirect_ptr = &discos->inodes[cur_node_num].double_indrect_ptrs;
+        // NULL pointer exception
+        if ( double_indirect_ptr != NULL ) {
+            int k;
+            for ( k = 0; k < BLOCK_SIZE/4; k++ ) {
+                // we got 64 single indirect pointer here
+                data_block_struct* single_indirect = double_indirect_ptr->index_block[k];
+                // now we do the same thing as we do to single indrect pointer
+                // NULL pointer exception
+                if ( single_indirect != NULL ) {
+                    for( i = 0; i < BLOCK_SIZE/4; i++ ) {
+                        // this data block contains 64 block pointers (see as index_block[] in the data struct)
+                        cur_data_block = single_indirect->index_block[i];   
+                        if ( cur_data_block != NULL ) {
+                            int j;
+                            for ( j = 0; j < BLOCK_SIZE/16; j++ ) {
+                                dir_entry_struct* entry = &cur_data_block->entries[j];
+                                if ( entry != NULL && strcmp(entry->name, split_string) == 0 ) {
+                                    cur_node_num = entry->inode_num;
+                                    printf("Double indirect: k=%dth double ptr, i=%dth single ptr, j=%dth entry\n", k, i, j);
+                                    break;
+                                }
+                            }
+                        }
+                        if ( cur_node_num != pre_node_num ) {
+                            // which means we have found the current dir_entry
+                            printf("which means we have found the current dir_entry in the single indrect block.\n");
+                            break;
+                        }
+                    }
+                }
+                if ( cur_node_num != pre_node_num ) {
+                    // which means we have found the current dir_entry
+                    printf("which means we have found the current dir_entry in the single indrect block.\n");
+                    break;
+                }
+            }
+        }
+
+        if ( cur_node_num != pre_node_num ) {
+			pre_node_num = cur_node_num;
+            split_string = strtok(NULL, delim);
+            printf("To be continued 3... \n");
+			continue;   // to find the next level directory
+		}
+        
+        // which mean you cannot find the dir
         return -1;
 
-        /*
-		//single directory entry
-		for(i = 0; i < BLOCK_SIZE/4; i++) {
-			int j;
-			cur_data_block = discos->inodes[cur_node_num].single_indirect_ptrs;
-			if(cur_data_block == NULL) {
-				return cur_node_num;
-			}
-			for(j = 0; j < BLOCK_SIZE/4; j++) {
-				int k;
-				cur_data_block = discos->inodes[cur_node_num].single_indirect_ptrs->index_block[j];
-				if(cur_data_block == NULL) {
-					return cur_node_num;
-				}
-				for(k = 0; k < BLOCK_SIZE/sizeof(dir_entry_struct); k++) {
-					if(strcmp(cur_data_block->index_block[j]->entries[k].name, split_string) == 0) {
-						cur_node_num = cur_data_block->index_block[j]->entries[k].inode_num;
-						break;
-					}
-				}
-				if(cur_node_num) {
-
-                }
-			}
-		}
-        */
-
-        // split_string = strtok(NULL, delim);
 	}
-
 
 	free(temp_pathname);
 
@@ -401,7 +437,7 @@ int rd_create(char *pathname, char* type, int mode) {
     // find the next free entry in current directory
     dir_entry_struct* free_dir_entry = get_next_entry(current_path_inode);
     if ( free_dir_entry == NULL ) {
-        printf("No free entry! It has been full!\n");
+        printf("No free entry!\n");
         // 如果后面继续遍历间接指针 也没有，就说明已经到最大entry数目
         return -1;
     }
@@ -420,6 +456,8 @@ int rd_create(char *pathname, char* type, int mode) {
     free_dir_entry->inode_num = free_inode_num;
     printf("inode type: %s\n", type);
     strcpy(free_inode->type, type);
+
+    /* update size */
     current_path_inode->size += 16;
 
     free(current_path);
@@ -428,7 +466,7 @@ int rd_create(char *pathname, char* type, int mode) {
     return 0;
 }
 
-
+/* get_next_dir_entry in direct block*/
 dir_entry_struct* get_next_dir_entry(data_block_struct* block) {
     int j;
     for ( j = 0; j < BLOCK_SIZE/16; j++ ) {
@@ -440,18 +478,72 @@ dir_entry_struct* get_next_dir_entry(data_block_struct* block) {
     return NULL;
 }
 
+
+/* get next dir entry from single indirect block */
+dir_entry_struct* get_next_dir_entry_single(data_block_struct* index_block, int _segment) {
+    
+    int seg = _segment; // segment has been substracted by 8
+    // we start from the first block of single indirect blocks
+    // data_block_struct* index_block is the single indirect pointer
+    data_block_struct* block = &index_block[seg];
+    if ( block == NULL ) {
+        int free_block_num = get_free_block_num_from_bitmap(discos->bitmap);
+        if ( free_block_num == -1 ) {
+                printf("Cannot find free blocks.\n");
+                return NULL;
+        }
+        // we find a new block
+        printf("free block number: %d, single index_block[%d]\n", free_block_num, seg);
+
+        data_block_struct* new_data_block = allocate_data_block( free_block_num );
+        printf("After allocate datablock: \n");
+        // print_bitmap(discos->bitmap);
+        /* !! update ptr */
+        block = new_data_block;
+        return &block->entries[0];
+    }
+
+    return get_next_dir_entry(block);
+}
+
+dir_entry_struct* get_next_dir_entry_double(data_block_struct* index_block, int _segment) {
+
+    // locate the single indirect
+    int seg = _segment/64;
+    data_block_struct* block = &index_block[seg];
+    if ( block == NULL ) {
+        int free_block_num = get_free_block_num_from_bitmap(discos->bitmap);
+        if ( free_block_num == -1 ) {
+                printf("Cannot find free blocks.\n");
+                return NULL;
+        }
+        // we find a new block
+        printf("free block number: %d, double index_block[%d]\n", free_block_num, seg);
+        data_block_struct* new_index_block = allocate_data_block( free_block_num );
+        printf("After allocate datablock: \n");
+        // print_bitmap(discos->bitmap);
+        /* !! update ptr */
+        block = new_index_block;
+    }
+    return get_next_dir_entry_single(block, _segment%64);
+}
+
+
+/* get next entry from the current inode */
 dir_entry_struct* get_next_entry(inode_struct* node) {
 
     // find the block that has not been full
     int seg = node->size / BLOCK_SIZE;
-    printf("node->size / 256 = %d\n", seg);
+    printf("last block that is not full: node->size / BLOCK_SIZE = %d\n", seg);
+    
+    /* find the block that has not been full in direct block */
     int i;
     for ( i = seg; i < INODE_NUM_DIRECT_PTR; i++ ) {
         data_block_struct* dir_ptr = node->pointers[i];
         // this block is empty
         if ( dir_ptr == NULL ) {
             printf("We need a new block.\n");
-            print_bitmap(discos->bitmap);
+            // print_bitmap(discos->bitmap);
             int free_block_num = get_free_block_num_from_bitmap(discos->bitmap);
             if ( free_block_num == -1 ) {
                  printf("Cannot find free blocks.\n");
@@ -462,7 +554,8 @@ dir_entry_struct* get_next_entry(inode_struct* node) {
 
             data_block_struct* new_data_block = allocate_data_block( free_block_num );
             printf("After allocate datablock: \n");
-            print_bitmap(discos->bitmap);
+            // print_bitmap(discos->bitmap);
+            /* !! update ptr */
             node->pointers[i] = new_data_block;
             return &new_data_block->entries[0];
         }
@@ -476,10 +569,68 @@ dir_entry_struct* get_next_entry(inode_struct* node) {
         }
     }
 
-    // single indrect
+    /* single indirect block */
+    // seg should be in range [8,72)
+    if ( seg >= 8 && seg < (8 + 64) ) {
+        if ( node->single_indirect_ptrs == NULL ) {
+            printf("Single indirect (NULL). We need a new block.\n");
+            
+            // print_bitmap(discos->bitmap);
+            int free_block_num = get_free_block_num_from_bitmap(discos->bitmap);
+            if ( free_block_num == -1 ) {
+                 printf("Cannot find free blocks.\n");
+                 return NULL;
+            }
+            // we find a new block
+            printf("free block number: %d\n", free_block_num);
 
+            data_block_struct* new_index_block = allocate_data_block( free_block_num );
+            printf("After allocate datablock: \n");
+            // print_bitmap(discos->bitmap);
+            /* !! update ptr */
+            node->single_indirect_ptrs = new_index_block;
+        }
 
-    // double indrect
+        // this block has not been full yet
+        // then we get the next free entry in this block
+        dir_entry_struct* free_dir_entry = get_next_dir_entry_single(node->single_indirect_ptrs, seg - 8);
+        if ( free_dir_entry != NULL ) {
+            printf("return free_dir_entry\n");
+            return free_dir_entry;
+        }
+        /* why seg = 72 */
+    }
+
+    /* double indrect block */
+    if ( seg >= (8 + 64) && seg < (8 + 64 + 64*64) ) {
+        if ( node ->double_indrect_ptrs ==  NULL ) {
+            printf("Double indirect (NULL). We need a new block.\n");
+            int free_block_num = get_free_block_num_from_bitmap(discos->bitmap);
+            if ( free_block_num == -1 ) {
+                 printf("Cannot find free blocks.\n");
+                 return NULL;
+            }
+            // we find a new block
+            printf("free block number: %d\n", free_block_num);
+
+            data_block_struct* new_index_block = allocate_data_block( free_block_num );
+            printf("After allocate datablock: \n");
+            // print_bitmap(discos->bitmap);
+            /* !! update ptr */
+            node->double_indrect_ptrs = new_index_block;
+        }
+
+        dir_entry_struct* free_dir_entry = get_next_dir_entry_double(node->double_indirect_ptrs, seg - 72);
+        if ( free_dir_entry != NULL ) {
+            printf("return free_dir_entry\n");
+            return free_dir_entry;
+        }
+
+    }
+
+    if ( seg >= (8 + 64 + 64*64) ) {
+        printf("Over 8 + 64 + 64*64\n");
+    }
 
     return NULL;
 }
