@@ -101,10 +101,16 @@ typedef struct FILESYS {
 int init_file_sys();
 int rd_mkdir(char* pathname);
 void parse_absolute_path(char* _path, char* _current_dir, char* _target);
-int find_node_number(char* pathname);
-int create_file(char* filename, char* type, int cur_node_num);
-dir_entry_struct* get_next_free_dir_entry(inode_struct* node);
+int find_inode_number(char* pathname);
 int get_free_block_num_from_bitmap(unsigned char* map);
+int clear_bitmap(unsigned char* map, int index);
+int set_bitmap(unsigned char* map, int index);
+int get_free_inode_num();
+inode_struct* allocate_inode( int free_inode_num );
+data_block_struct* allocate_data_block( int free_block_number );
+int rd_create(char *pathname, char* type, int mode);
+dir_entry_struct* get_next_dir_entry(data_block_struct* block);
+dir_entry_struct* get_next_entry(inode_struct* node);
 
 /* file descriptor table*/
 
