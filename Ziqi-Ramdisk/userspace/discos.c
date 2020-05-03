@@ -119,6 +119,7 @@ int find_node_number(char* pathname) {
 	char* split_string = strtok(temp_pathname, delim);
 	int pre_node_num = 0;
 	int cur_node_num = 0;
+	int has_null_ptr = 0;
 	data_block_struct* cur_data_block;
 	while(split_string) {
 		printf("%s\n", split_string);
@@ -209,7 +210,63 @@ int get_free_inode() {
 
 //后期mode改成mode_t
 int rd_create(char *pathname, int mode) {
+}
 
+//create file or directory, return cur_node_num
+/**
+ * 
+ * 
+ */
+int create_file(char* filename, char* type, int cur_node_num) {
+	inode_struct cur_inode = discos->inodes[cur_node_num];
+	char bitmap = discos->bitmap;
+	int free_bit = get_free_block_num_from_bitmap(&bitmap);
+}
+
+/* get the free block number from bitmap 
+    return the number of the free data block.
+    If there is no data block, return -1.
+*/
+int get_free_block_num_from_bitmap(unsigned char* map) {
+    // map: char bitmap[BITMAP_SIZE*BLOCK_SIZE]; 8192 bits in all
+    // the first 7931 blocks are usable
+
+    // find the first 0 bit in bit map
+    int i;
+    int free_byte_pos;
+    unsigned char free_byte;
+    // iterate bit map byte by byte
+    for ( i = 0; i < /*BITMAP_SIZE*BLOCK_SIZE*/1024; i++ ) {
+        unsigned char ch = map[i];
+        if ( ch != 255 )  {
+            free_byte_pos = i;
+            free_byte = map[i];
+            break;
+        }
+    }
+
+    // no free data block
+    if ( i == /*BITMAP_SIZE*BLOCK_SIZE*/1024 ) {
+        return -1;
+    }
+    // printf("byte i=%d\n", free_byte);
+    // printf("free_byte_pos=%d\n", free_byte_pos);
+    // iterate a byte bit by bit
+    int free_bit;
+    for ( i = 0, free_bit = free_byte_pos * 8; i < 8; i++ ) {
+        if ( (free_byte & (unsigned char)1 ) == 0 ) {
+            free_bit += i;
+            break;
+        }
+        free_byte = free_byte >> 1;
+    }
+    // printf("free_bit: %d\n", free_bit);
+    // check it out whether it is greater than 7931-1
+    if ( free_bit >= 7931 ) {
+        return -1;
+    }
+
+    return free_bit;
 }
 /**
  * int rd_creat(char *pathname, mode_t mode)

@@ -180,7 +180,7 @@ int rd_mkdir(char* pathname) {
 
 
 void parse_absolute_path(char* _path, char* _current_dir, char* filename) {
-	// absolute path, current category, file name
+	//absolute path, current category, file name
 	int i;
 	int len = strlen(_path);
 	for ( i = len - 1; i >= 0; i-- ) {
@@ -195,7 +195,7 @@ void parse_absolute_path(char* _path, char* _current_dir, char* filename) {
 		}
 	}
     // char * strcpy ( char * destination, const char * source );
-	strcpy(filename, &_path[i + 1]);
+	strcpy(filename, &_path[i + 1]);  
 }
 
 /*
@@ -327,7 +327,6 @@ int set_bitmap(unsigned char* map, int index) {
     return 0;
 }   
 
-
 // get free inode
 int get_free_inode() {
     int i;
@@ -340,14 +339,9 @@ int get_free_inode() {
     return -1;
 }
 
-/* */
-dir_entry_struct* get_next_free_dir_entry(inode_struct* node) {
-
-    return NULL;
-}
-
 /* create file or directory */
 int rd_create(char *pathname, char* type, int mode) {
+    
 
     printf("Creating file/directory ...\n");
 
