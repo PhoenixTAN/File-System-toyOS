@@ -1,5 +1,5 @@
 all: 
-	gcc -Wall filesysUtil_temp.c -o discos
+	gcc -Wall discos.c -o discos
 
 clean:
 	rm discos

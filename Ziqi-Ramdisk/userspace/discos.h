@@ -106,6 +106,7 @@ typedef struct FILESYS {
 
 /* file system initialization*/
 int init_file_sys();
+void cmd_daemon();
 
 /* helper functions */
 int clear_bitmap(unsigned char* map, int index);
