@@ -38,6 +38,7 @@ cd
 #define RW  (S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH)
 #define WR  (S_IWUSR | S_IRGRP | S_IROTH)
 
+/* global variables */
 filesys_struct* discos;
 
 int main(void) {
@@ -53,7 +54,8 @@ int main(void) {
 	printf("   double_indirect %d\n", sizeof(double_indirect_struct));
 	printf("   inode %d\n", sizeof(inode_struct));
 	printf("   filesys %d\n", sizeof(filesys_struct));
-    // test mkdir 
+    
+	// custom test
     /*
     int ret;
     ret = rd_mkdir("/");    // output root exits
@@ -62,11 +64,13 @@ int main(void) {
     ret = rd_mkdir("/folder1/floder3");
     ret = rd_mkdir("/folder1/floder3/floder4");
     ret = rd_create("/folder1/floder2/Hellooooooooo", "reg\0", 1);
-    print_bitmap(discos->bitmap);*/
+    print_bitmap(discos->bitmap);
+	*/
 
     // initialize file system
 	init_file_sys();
 
+	/* test_file.c */
     char pathname[80];
 
     int retval, i;
@@ -138,6 +142,8 @@ int main(void) {
     printf("<1> TEST 5 pass!\n\n");
     #endif // TEST5
 
+	
+	/* free ramdisk */
 	free(discos);
 
 	return 0;

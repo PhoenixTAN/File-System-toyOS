@@ -48,19 +48,6 @@ union DATA_BLOCK {
 };
 
 
-/* single indirect block pointer */
-typedef struct SINGLE_INDIRECT {
-    // index block belongs to data block
-    data_block_struct *index_blocks[BLOCK_SIZE/4];     // 4 bytes = sizeof(pointer)
-} single_indirect_struct;
-
-
-/* single indirect block pointer */
-typedef struct DOUBLE_INDIRECT {
-    single_indirect_struct *index_blocks[BLOCK_SIZE/4];    
-} double_indirect_struct;
-
-
 /* i node */
 typedef struct I_NODE {
     char type[4];      // either “dir” or “reg” (4 bytes)
@@ -128,5 +115,3 @@ int rd_mkdir(char* pathname);
 int rd_create(char *pathname, char* type, int mode);
 
 #endif // !RAMDISK_H
-
-
