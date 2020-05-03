@@ -98,38 +98,33 @@ typedef struct FILESYS {
 
 } filesys_struct;
 
-int init_file_sys();
-int rd_mkdir(char* pathname);
-void parse_absolute_path(char* _path, char* _current_dir, char* _target);
-int find_inode_number(char* pathname);
-int get_free_block_num_from_bitmap(unsigned char* map);
-int clear_bitmap(unsigned char* map, int index);
-int set_bitmap(unsigned char* map, int index);
-int get_free_inode_num();
-inode_struct* allocate_inode( int free_inode_num );
-data_block_struct* allocate_data_block( int free_block_number );
-int rd_create(char *pathname, char* type, int mode);
-dir_entry_struct* get_next_dir_entry(data_block_struct* block);
-dir_entry_struct* get_next_entry(inode_struct* node);
-
 /* file descriptor table*/
 
 /* file object */
 
 
-/* Files Operations */
 
-/*
-int rd_creat(char* pathname, mode_t mode);
+/* file system initialization*/
+int init_file_sys();
+
+/* helper functions */
+int clear_bitmap(unsigned char* map, int index);
+int set_bitmap(unsigned char* map, int index);
+void parse_absolute_path(char* _path, char* _current_dir, char* _target);
+int find_inode_number(char* pathname);
+int get_free_block_num_from_bitmap(unsigned char* map);
+int get_free_inode_num();
+inode_struct* allocate_inode(int free_inode_num);
+data_block_struct* allocate_data_block(int free_block_number);
+dir_entry_struct* get_next_dir_entry(data_block_struct* block);
+dir_entry_struct* get_next_entry(inode_struct* node);
+dir_entry_struct* get_next_dir_entry_single(data_block_struct* index_block, int _segment);
+dir_entry_struct* get_next_dir_entry_double(data_block_struct* index_block, int _segment);
+
+
+/* file operations */
 int rd_mkdir(char* pathname);
-int rd_open(char* pathname, int flags);
-int rd_close(int fd);
-int rd_read(int fd, char* address, int num_bytes);
-int rd_write(int fd, char* address, int num_bytes);
-int rd_lseek(int fd, int offset);
-int rd_unlink(char* pathname);
-int rd_chmod(char* pathname, mode_t mode);
-*/
+int rd_create(char *pathname, char* type, int mode);
 
 #endif // !RAMDISK_H
 

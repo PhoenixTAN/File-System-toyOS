@@ -1,5 +1,11 @@
 #include "discos.h"
 
+#include <stdlib.h>
+#include <unistd.h>
+#include <fcntl.h>
+#include <sys/stat.h>
+#include <dirent.h>
+
 /*
 pwd
 ls
@@ -7,26 +13,48 @@ cd
 cd 
 */
 
+/* Macro from test file */
+// #define TEST1
+// #define TEST2
+// #define TEST3
+// #define TEST4
+#define TEST5
+// #define TEST6
+
+#define PATH_PREFIX ""
+
+#define CREAT   rd_create
+#define OPEN    rd_open
+#define WRITE   rd_write
+#define READ    rd_read
+#define UNLINK  rd_unlink
+#define MKDIR   rd_mkdir
+#define CLOSE   rd_close
+#define LSEEK   rd_lseek
+#define CHMOD   rd_chmod
+
+// File modes
+#define RD  (S_IRUSR | S_IRGRP | S_IROTH)
+#define RW  (S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH)
+#define WR  (S_IWUSR | S_IRGRP | S_IROTH)
+
 filesys_struct* discos;
 
 int main(void) {
 
 	printf("\n\nDiscos ##########\n");
 
-	/* Data structure size check */
+	// Data structure size check
     printf("Data structure size check:\n");
-	printf("  superblock %d\n", sizeof(superblock_struct));
-	printf("  dir entry %d\n", sizeof(dir_entry_struct));
-	printf("  data block %d\n", sizeof(data_block_struct));
-	printf("  single_indirect %d\n", sizeof(single_indirect_struct));
-	printf("  double_indirect %d\n", sizeof(double_indirect_struct));
-	printf("  inode %d\n", sizeof(inode_struct));
-	printf("  filesys %d\n", sizeof(filesys_struct));
-
-    /* initialize file system */
-	init_file_sys();
-
-    /* test mkdir */
+	printf("   superblock %d\n", sizeof(superblock_struct));
+	printf("   dir entry %d\n", sizeof(dir_entry_struct));
+	printf("   data block %d\n", sizeof(data_block_struct));
+	printf("   single_indirect %d\n", sizeof(single_indirect_struct));
+	printf("   double_indirect %d\n", sizeof(double_indirect_struct));
+	printf("   inode %d\n", sizeof(inode_struct));
+	printf("   filesys %d\n", sizeof(filesys_struct));
+    // test mkdir 
+    /*
     int ret;
     ret = rd_mkdir("/");    // output root exits
     ret = rd_mkdir("/folder1"); 
@@ -34,7 +62,81 @@ int main(void) {
     ret = rd_mkdir("/folder1/floder3");
     ret = rd_mkdir("/folder1/floder3/floder4");
     ret = rd_create("/folder1/floder2/Hellooooooooo", "reg\0", 1);
-    print_bitmap(discos->bitmap);
+    print_bitmap(discos->bitmap);*/
+
+    // initialize file system
+	init_file_sys();
+
+    char pathname[80];
+
+    int retval, i;
+    int fd;
+    int index_node_number;
+    #ifdef TEST1
+
+    /* ****TEST 1: MAXIMUM file creation**** */
+
+    /* Generate MAXIMUM regular files */
+    for ( i = 0; i < MAX_NUM_FILE - 1; i++ ) { 
+        sprintf (pathname, PATH_PREFIX "/file%d", i);
+    
+        retval = CREAT (pathname, "reg\0", RD);
+    
+        if (retval < 0) {
+            fprintf (stderr, "creat: File creation error! status: %d (%s)\n", retval, pathname);
+            perror("Error!");
+      
+            if (i != MAX_NUM_FILE - 1)
+	            exit(EXIT_FAILURE);
+        }
+    
+        memset (pathname, 0, 80);
+    }   
+
+    /* Delete all the files created */
+    /*for (i = 0; i < MAX_FILES; i++) { 
+        sprintf (pathname, PATH_PREFIX "/file%d", i);
+    
+        retval = UNLINK (pathname);
+    
+        if (retval < 0) {
+            fprintf (stderr, "unlink: File deletion error! status: %d\n", retval);
+      
+            exit(EXIT_FAILURE);
+        }
+    
+        memset (pathname, 0, 80);
+    }*/
+    printf("<1> Test 1 pass!\n\n");
+    #endif // TEST1
+
+    #ifdef TEST5
+  
+    /* ****TEST 5: Make directory including entries **** */
+    retval = MKDIR (PATH_PREFIX "/dir1");
+    
+    if (retval < 0) {
+        fprintf (stderr, "mkdir: Directory 1 creation error! status: %d\n", retval);
+        exit(EXIT_FAILURE);
+    }
+
+    retval = MKDIR (PATH_PREFIX "/dir1/dir2");
+    
+    if (retval < 0) {
+        fprintf (stderr, "mkdir: Directory 2 creation error! status: %d\n", retval);
+
+        exit(EXIT_FAILURE);
+    }
+
+    retval = MKDIR (PATH_PREFIX "/dir1/dir3");
+    
+    if (retval < 0) {
+        fprintf (stderr, "mkdir: Directory 3 creation error! status: %d\n", retval);
+
+        exit(EXIT_FAILURE);
+    }
+    printf("<1> TEST 5 pass!\n\n");
+    #endif // TEST5
 
 	free(discos);
 
