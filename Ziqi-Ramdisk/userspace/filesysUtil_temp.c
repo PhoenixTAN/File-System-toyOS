@@ -400,3 +400,17 @@ int rd_create(char *pathname, char* type, int mode) {
     return 0;
 }
 
+dir_entry_struct* get_next_free_dir_entry(inode_struct* node) {
+    int i;
+    for(i = 0; i < INODE_NUM_DIRECT_PTR; i++) {
+        data_block_struct* dir_ptr = node->pointers[i];
+        int j;
+        // directory entry
+        for(j = 0; j < BLOCK_SIZE/sizeof(dir_entry_struct); j++) {
+            if(strcmp(dir_ptr->entries[j].name, "") == 0) {
+                return &(dir_ptr->entries[j]);
+            }
+        }
+    }
+     return NULL;
+}

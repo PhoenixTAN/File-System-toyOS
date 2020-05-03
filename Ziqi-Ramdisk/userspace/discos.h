@@ -103,6 +103,7 @@ int rd_mkdir(char* pathname);
 void parse_absolute_path(char* _path, char* _current_dir, char* _target);
 int find_node_number(char* pathname);
 int create_file(char* filename, char* type, int cur_node_num);
+dir_entry_struct* get_next_free_dir_entry(inode_struct* node);
 
 /* file descriptor table*/
 
