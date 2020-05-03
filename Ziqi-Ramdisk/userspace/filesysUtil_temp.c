@@ -258,7 +258,7 @@ int find_inode_number(char* pathname) {
 		}
 
         /* try to find current dir in double indirect block */
-        data_block_struct* double_indirect_ptr = &discos->inodes[cur_node_num].double_indrect_ptrs;
+        data_block_struct* double_indirect_ptr = &discos->inodes[cur_node_num].double_indirect_ptrs;
         // NULL pointer exception
         if ( double_indirect_ptr != NULL ) {
             int k;
@@ -603,7 +603,7 @@ dir_entry_struct* get_next_entry(inode_struct* node) {
 
     /* double indrect block */
     if ( seg >= (8 + 64) && seg < (8 + 64 + 64*64) ) {
-        if ( node ->double_indrect_ptrs ==  NULL ) {
+        if ( node ->double_indirect_ptrs ==  NULL ) {
             printf("Double indirect (NULL). We need a new block.\n");
             int free_block_num = get_free_block_num_from_bitmap(discos->bitmap);
             if ( free_block_num == -1 ) {
@@ -617,7 +617,7 @@ dir_entry_struct* get_next_entry(inode_struct* node) {
             printf("After allocate datablock: \n");
             // print_bitmap(discos->bitmap);
             /* !! update ptr */
-            node->double_indrect_ptrs = new_index_block;
+            node->double_indirect_ptrs = new_index_block;
         }
 
         dir_entry_struct* free_dir_entry = get_next_dir_entry_double(node->double_indirect_ptrs, seg - 72);

@@ -69,7 +69,7 @@ typedef struct I_NODE {
     data_block_struct *pointers[INODE_NUM_DIRECT_PTR];       // 8 direct block pointer
     
     data_block_struct *single_indirect_ptrs;   // 4 bytes
-    data_block_struct *double_indrect_ptrs;    // 4 bytes
+    data_block_struct *double_indirect_ptrs;    // 4 bytes
 
     uint32_t access;    // 4 bytes
 
