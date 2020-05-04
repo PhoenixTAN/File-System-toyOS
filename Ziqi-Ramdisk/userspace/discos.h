@@ -4,6 +4,12 @@
 #include <stdio.h>
 #include <string.h>		// strcmp
 
+#include <stdlib.h>
+#include <unistd.h>
+#include <fcntl.h>
+#include <sys/stat.h>
+#include <dirent.h>
+
 /* getconf ARG_MAX */
 #define CMD_MAX_LENGTH          128		// 2097152 in bytes
 
@@ -15,7 +21,8 @@
 #define MAX_NUM_FILE            1024  
 #define MAX_FILE_SIZE           1067008 // in bytes      
 #define INODE_NUM_DIRECT_PTR    8
-#define DATA_BLOCKS_NUM         7931    
+#define DATA_BLOCKS_NUM         7931   
+#define THERAD_POOL_SIZE        10 
 
 typedef unsigned short uint16_t;
 typedef unsigned int uint32_t;
@@ -85,10 +92,27 @@ typedef struct FILESYS {
 
 } filesys_struct;
 
-/* file descriptor table*/
 
 /* file object */
+typedef struct FILE_object {
+    inode_struct* inode_ptr;
+    unsigned int status;
+    unsigned int file_position;
 
+} file_object;
+
+
+/* file descriptor table*/
+typedef struct FILE_DESCRIPTOR_TABLE {
+    file_object file_objects[1024];
+} file_descriptor_table;
+
+
+/* thread pool */
+typedef struct PROCESS_FD_TABLE {
+    unsigned int pid;
+    file_descriptor_table fd_table;
+} process_fd_table;
 
 
 /* file system initialization*/
@@ -114,10 +138,13 @@ void print_block_entries_info(int index);
 void print_inode_info(int index);
 void print_bitmap(unsigned char* map);
 
+file_object* create_file_object();
+
 /* file operations */
 int rd_mkdir(char* pathname);
 int rd_create(char *pathname, char* type, unsigned int mode);
 int rd_unlink(char *pathname);
 int rd_chmod(char *pathname, unsigned int mode);
+int rd_open(char *pathname, unsigned int flags);
 
 #endif // !RAMDISK_H

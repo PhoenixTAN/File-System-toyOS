@@ -1,10 +1,5 @@
 #include "discos.h"
 
-#include <stdlib.h>
-#include <unistd.h>
-#include <fcntl.h>
-#include <sys/stat.h>
-#include <dirent.h>
 
 /*
 pwd
@@ -38,9 +33,15 @@ cd
 #define RW  (S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH)
 #define WR  (S_IWUSR | S_IRGRP | S_IROTH)
 
+// File open flags
+#define READONLY   O_RDONLY
+#define READWRITE  O_RDWR
+#define WRITEONLY  O_WRONLY
+
 /* global variables */
 filesys_struct* discos;
 
+process_fd_table p_fd_table[THERAD_POOL_SIZE];
 
 int main(void) {
 
@@ -53,6 +54,7 @@ int main(void) {
 	printf("   data block %d\n", sizeof(data_block_struct));
 	printf("   inode %d\n", sizeof(inode_struct));
 	printf("   filesys %d\n", sizeof(filesys_struct));
+
     
 	// custom test
     /*
@@ -1048,16 +1050,16 @@ int rd_chmod(char *_pathname, unsigned int mode) {
     char* pathname = malloc(strlen(_pathname));
     strcpy(pathname, _pathname);
     printf("chmod %u %s...\n", mode, pathname);
-	// error occurs if you attempt to unlink the root directory file.
+	
 	if ( strcmp(pathname, "/") == 0 ) {
-		printf("<1> rd_unlink Error occurs: you attempt to chmod the root dir.\n");
+		printf("<1> rd_chmod Error occurs: you attempt to chmod the root dir.\n");
 		return -1;
 	}
 
 	// error occurs if the pathname does not exist
 	int file_inode_num = find_inode_number(pathname);
 	if ( file_inode_num == -1 ) {
-		printf("<1> rd_unlink Error occurs: the pathname does not exist.\n");
+		printf("<1> rd_chmod Error occurs: the pathname does not exist.\n");
 		return -1;
 	}
 
@@ -1067,3 +1069,66 @@ int rd_chmod(char *_pathname, unsigned int mode) {
     return 0;
 
 }
+
+
+/**
+ * open an existing file corresponding to pathname (which can be a regular or directory file) or 
+ * report an error if file does not exist. 
+ * When opening a file, you should return a file descriptor value 
+ * that will index into the process' ramdisk file descriptor table. As stated earlier, 
+ * this table entry will contain a pointer to a file object. 
+ * You can assume the file object has status=flags (unless there is an error), 
+ * and the file position is set to 0. 
+ * An error can occur when opening a file if the file does not exist 
+ * or if the flags value overrides the access rights when the file was created. 
+ * For example, a process should not be allowed to open a file for writing if its access rights are read-only. 
+ * Finally, you can assume that flags can be any one of READONLY, WRITEONLY, or READWRITE. 
+ * Return a value of -1 to indicate an access error, or if the file does not exist.
+ * 
+*/
+int rd_open(char *_pathname, unsigned int flags) {
+
+    char* pathname = malloc(strlen(_pathname));
+    strcpy(pathname, _pathname);
+    printf("Opening %u %s...\n", flags, pathname);
+	
+	if ( strcmp(pathname, "/") == 0 ) {
+		printf("<1> rd_open Error occurs: you attempt to open the root dir.\n");
+		return -1;
+	}
+
+	// error occurs if the pathname does not exist
+	int file_inode_num = find_inode_number(pathname);
+	if ( file_inode_num == -1 ) {
+		printf("<1> rd_open Error occurs: the pathname does not exist.\n");
+		return -1;
+	}
+
+    inode_struct* file_inode = &discos->inodes[file_inode_num];
+
+    // check the access right
+    if ( flags == RD && file_inode->access == WR ) {
+        printf("<1> rd_open Error occurs: No access right. flags=%d, access=%d\n", flags, file_inode->access);
+        return -1;
+    }
+    if ( flags == WR && file_inode->access == RD ) {
+        printf("<1> rd_open Error occurs: No access right. flags=%d, access=%d\n", flags, file_inode->access);
+        return -1;
+    }
+    if ( flags == RW && file_inode->access != RW ) {
+        printf("<1> rd_open Error occurs: No access right. flags=%d, access=%d\n", flags, file_inode->access);
+        return -1;
+    }
+
+
+
+    return 0;
+}
+
+
+file_object* create_file_object() {
+
+
+    return NULL;
+}
+
