@@ -18,7 +18,7 @@ static int discos_ioctl(struct inode *inode, struct file *file, unsigned int cmd
 	int ret = 0;
 	int size, left, flag;
 	char *pathname, *data, *from;
-	ioctl_args_t* args = (ioctl_args_t *)vmalloc(sizeof(ioctl_args_t));
+	ioctl_args_t* args = (ioctl_args_t *)kmalloc(sizeof(ioctl_args_t), GFP_KERNEL);
 	if(copy_from_user(args, (ioctl_args_t *)arg, sizeof(ioctl_args_t))) {
 		printk("<1> Error copy from user\n");
 	}
@@ -82,8 +82,8 @@ static int discos_ioctl(struct inode *inode, struct file *file, unsigned int cmd
  		case RD_CREATE:
 			// spin_lock(&my_lock);
 			ret = rd_create(pathname, "reg\0", 1);
-			vfree(pathname);
-			vfree(args);
+			kfree(pathname);
+			kfree(args);
 			// spin_unlock(&my_lock);
 			return ret;
 			break;
@@ -96,14 +96,14 @@ static int discos_ioctl(struct inode *inode, struct file *file, unsigned int cmd
 			printk("<1> Mkdir %s\n", pathname);
 			ret = rd_mkdir(pathname);
 			kfree(pathname);
-			vfree(args);
+			kfree(args);
 			/*spin_unlock(&my_lock);*/
 			return ret;
 			break;
 		case RD_UNLINK:
 			ret = rd_unlink(pathname);
 			kfree(pathname);
-			vfree(args);
+			kfree(args);
 			/*spin_unlock(&my_lock);*/
 			return ret;
 			break;
@@ -114,7 +114,7 @@ static int discos_ioctl(struct inode *inode, struct file *file, unsigned int cmd
 		// 	return ret;
 		default:
 			printk("<1> hitting default case \n");
-			vfree(args);
+			kfree(args);
 			/*spin_unlock(&my_lock);*/
 			return -EINVAL;
 			break;			

@@ -327,15 +327,24 @@ int my_find_inode_number(char* pathname) {
     const char* delim = "/";
 
     char* temp_pathname, *found;
-	temp_pathname = vmalloc(strlen(pathname));
+ 	temp_pathname = vmalloc(strlen(pathname));
 	strcpy(temp_pathname, pathname);
+	// temp_pathname = vmalloc(strlen(pathname));
+	// strcpy(temp_pathname, pathname);
     // printk("deep copy path: %s\n", temp_pathname);
 
-    char* split_string = strsep(&temp_pathname, delim);
+    // char* split_string = strsep(&temp_pathname, delim);
     // printk("delete the first delim temp_pathname: %s\n", temp_pathname);
     // printk("delete the first delim split_string: %s\n", split_string);
 
-    if ( split_string == NULL ) {
+    if(strcmp(temp_pathname, delim) == 0) {
+        return 0;
+    }
+
+    temp_pathname++;
+
+
+    if ( temp_pathname == NULL ) {
         return 0;
     }
 

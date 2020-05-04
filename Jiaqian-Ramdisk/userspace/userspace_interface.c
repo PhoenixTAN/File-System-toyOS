@@ -26,3 +26,11 @@ int rd_unlink(char* pathname) {
     ret = ioctl(fd, RD_UNLINK, args);
     return ret;
 }
+
+int rd_mkdir(char* pathname) {
+    ioctl_args_t* args = malloc(sizeof(ioctl_args_t));
+    memset(args, 0, sizeof(ioctl_args_t));
+    args->pathname = pathname;
+    ret = ioctl(fd, RD_MKDIR, args);
+    return ret;
+}

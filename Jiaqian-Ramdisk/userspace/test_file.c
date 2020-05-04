@@ -21,7 +21,7 @@
 // #define TEST2
 // #define TEST3
 // #define TEST4
-// #define TEST5
+#define TEST5
 // #define TEST6
 
 // File modes
@@ -69,7 +69,7 @@
 #define TEST_DOUBLE_INDIRECT
 
 
-#define MAX_FILES 1023
+#define MAX_FILES 900
 #define BLK_SZ 256		/* Block size */
 #define DIRECT 8		/* Direct pointers in location attribute */
 #define PTR_SZ 4		/* 32-bit [relative] addressing */
@@ -119,7 +119,7 @@ int main () {
 
   /* Delete all the files created */
   for (i = 0; i < MAX_FILES; i++) { 
-    sprintf (pathname, PATH_PREFIX "/file%d", i);
+    sprintf (pathname, PATH_PREFIX "file%d", i);
     
     retval = UNLINK (pathname);
     
@@ -317,7 +317,7 @@ int main () {
 #ifdef TEST5
   
   /* ****TEST 5: Make directory including entries **** */
-  retval = MKDIR (PATH_PREFIX "/dir1");
+  retval = MKDIR (PATH_PREFIX "dir1");
     
   if (retval < 0) {
     fprintf (stderr, "mkdir: Directory 1 creation error! status: %d\n",
@@ -326,7 +326,7 @@ int main () {
     exit(EXIT_FAILURE);
   }
 
-  retval = MKDIR (PATH_PREFIX "/dir1/dir2");
+  retval = MKDIR (PATH_PREFIX "dir1/dir2");
     
   if (retval < 0) {
     fprintf (stderr, "mkdir: Directory 2 creation error! status: %d\n",
@@ -335,7 +335,7 @@ int main () {
     exit(EXIT_FAILURE);
   }
 
-  retval = MKDIR (PATH_PREFIX "/dir1/dir3");
+  retval = MKDIR (PATH_PREFIX "dir1/dir3");
     
   if (retval < 0) {
     fprintf (stderr, "mkdir: Directory 3 creation error! status: %d\n",
