@@ -116,5 +116,6 @@ int rd_mkdir(char* pathname);
 int rd_create(char *pathname, char* type, int mode);
 int rd_unlink(char *pathname);
 
+// int rd_chmod(char *pathname, mode_t mode);
 
 #endif // !RAMDISK_H
