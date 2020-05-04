@@ -100,9 +100,9 @@ int main(void) {
 
     printf("<1> Test 1 created 1023 files succeeded!\n\n");
     print_bitmap(discos->bitmap);
-    for ( i = 0; i < 65; i++ ) {
+    /*for ( i = 0; i < 65; i++ ) {
         print_block_entries_info(i);
-    }
+    }*/
     /* Delete all the files created */
     for (i = 0; i < MAX_NUM_FILE - 1; i++) { 
         
@@ -120,6 +120,11 @@ int main(void) {
     }
     printf("<1> Test 1 pass!\n\n");
     #endif // TEST1
+
+    print_bitmap(discos->bitmap);
+
+    print_inode_info(0);
+    print_inode_info(1);
 
     #ifdef TEST5
   
@@ -150,7 +155,7 @@ int main(void) {
     #endif // TEST5
 
     // print root dir inode info
-    for ( i = 0; i < 5; i++ ) {
+    /*for ( i = 0; i < 5; i++ ) {
         print_inode_info(i);
     }
 
@@ -165,14 +170,14 @@ int main(void) {
         print_inode_info(i);
     }
 
-    /* rd_open test */
+    /* rd_open test 
     retval = rd_open("/dir1", RD, 100);
     printf("file_cursor: %d\n", retval);
 
     rd_chmod("/dir1", RW);
     retval = rd_open("/dir1", RD, 100);
     printf("file_cursor: %d\n", retval);
-
+    */
 	/* free ramdisk */
 	free(discos);
 
@@ -195,8 +200,33 @@ void print_inode_info(int index) {
     inode_struct* inode = &discos->inodes[index];
     printf("     type: %s\n", inode->type);
     printf("     size: %d\n", inode->size);
-    printf("     access: %u\n", inode->access);
+    printf("     access: %u\n", inode->access); 
+    int i;
+    for ( i = 0; i < INODE_NUM_DIRECT_PTR; i++ ) {
+        if ( inode->pointers[i] == NULL ) {
+            printf("Inode->pointers[%d] is NULL \n", i);
+        }
+        else {
+            printf("Inode->pointers[%d]: point to block %d\n", i, inode->pointers[i] - &discos->data_blocks[0]);
+        }
+    }
 
+    if ( inode->single_indirect_ptrs == NULL ) {
+        printf("Single indirect is NULL\n");
+    }
+    else {
+        printf("Single indirect points to block %d\n", inode->single_indirect_ptrs - &discos->data_blocks[0]);
+        // iterate the entry
+        int j;
+        for ( j = 0; j < BLOCK_SIZE/16; j++ ) {
+            data_block_struct* index_block = inode->single_indirect_ptrs->index_block[j];
+            if ( index_block != NULL ) {
+                printf("    index block[%d] point to %d\n", j, index_block - &discos->data_blocks[0]);
+            }
+            
+        }
+    }
+    printf("\n");
 }
 
 
@@ -860,8 +890,6 @@ void clear_inode(inode_struct* inode) {
 		}
 	}
 
-    printf("Here!\n");
-
 	if ( inode->single_indirect_ptrs != NULL ) {
 		clear_inode_single_indirect(inode->single_indirect_ptrs);
 	}
@@ -880,7 +908,9 @@ void clear_inode_single_indirect(data_block_struct* single_indirect) {
 	for ( i = 0; i < BLOCK_SIZE/4; i++ ) {
 		data_block_struct* block = single_indirect->index_block[i];
 		if (  block != NULL ) {	
-			clear_bitmap(discos->bitmap, block - &discos->data_blocks[0]);
+			// clear_bitmap(discos->bitmap, block - &discos->data_blocks[0]);
+            printf("clear bit map: %d\n", single_indirect->index_block[i] - &discos->data_blocks[0]);
+            clear_bitmap(discos->bitmap, single_indirect->index_block[i] - &discos->data_blocks[0]);
 			memset(single_indirect->index_block[i], 0, BLOCK_SIZE);
 			discos->superblock.free_blocks++;
 		}
@@ -972,6 +1002,108 @@ dir_entry_struct* find_entry_in_current_dir(inode_struct* cur_dir_inode, char* f
 }
 
 
+/* find the entry name "filename" in the current directory inode */
+int clear_entry_in_current_dir(inode_struct* cur_dir_inode, char* filename) {
+    printf("clearing entry in current dir...\n");
+	dir_entry_struct* entry;  
+    int findEntry = 0; 
+	int i;
+	for ( i = 0; i < INODE_NUM_DIRECT_PTR; i++ ) {
+		data_block_struct* block = cur_dir_inode->pointers[i];
+        int nonEmptyEntries = 0;
+		if ( block != NULL ) {
+			// iterate the block to find the entry
+			int j;
+			for ( j = 0; j < BLOCK_SIZE/16; j++ ) {
+				entry = &block->entries[j];
+                if ( entry->inode_num != 0 ) {
+                    // printf("  entry->inode_num %d\n", entry->inode_num);
+                    nonEmptyEntries += 1;
+                }
+                if ( entry != NULL && strcmp(entry->name, filename) == 0 ) {
+                    
+                    memset(entry, 0, sizeof(dir_entry_struct));
+                    entry = NULL;
+                    findEntry = 1;
+                }
+			}
+		}
+        // printf("nonEmptyEntries: %d   findEntry=%d\n", nonEmptyEntries, findEntry);
+        if ( findEntry == 1 && nonEmptyEntries == 1 ) {
+            clear_bitmap(discos->bitmap, cur_dir_inode->pointers[i] - &discos->data_blocks[0]);
+            cur_dir_inode->pointers[i] = NULL;
+            print_bitmap(discos->bitmap);
+            
+        }
+	}
+
+
+    if ( findEntry == 1 ) {
+        return 0;
+    }
+
+    // find entry in single indirect
+    data_block_struct* single_indirect = cur_dir_inode->single_indirect_ptrs;
+    if ( single_indirect != NULL ) {
+        // int nonEmptyBlocks = 0;
+        for ( i = 0; i < BLOCK_SIZE/4; i++ ) {
+            data_block_struct* block = single_indirect->index_block[i];
+            int nonEmptyEntries = 0;
+            if ( block != NULL ) {
+                int j;
+                for ( j = 0; j < BLOCK_SIZE/16; j++ ) {
+                    entry = &block->entries[j];
+                    if ( entry->inode_num != 0 ) {
+                        nonEmptyEntries += 1;
+                    }
+                    if ( entry != NULL && strcmp(entry->name, filename) == 0 ) {
+                        // return entry;
+                        findEntry = 1;
+                        memset(entry, 0, sizeof(dir_entry_struct));
+                        entry = NULL;
+                        // return 0;
+                    }
+                }
+            }
+            // printf("nonEmptyEntries: %d   findEntry=%d\n", nonEmptyEntries, findEntry);
+            if ( findEntry == 1 && nonEmptyEntries == 1 ) {
+                printf("<><> clear bit %d\n", single_indirect->index_block[i] -  &discos->data_blocks[0]);
+                clear_bitmap(discos->bitmap, single_indirect->index_block[i] -  &discos->data_blocks[0]);
+                single_indirect->index_block[i] = NULL;
+                print_bitmap(discos->bitmap);
+                return 0;
+            }
+        }
+    }
+
+    // find entry in double indirect
+    data_block_struct* double_indirect = cur_dir_inode->double_indirect_ptrs;
+    if ( double_indirect != NULL ) {
+        // iterate single indirect
+        for ( i = 0; i < BLOCK_SIZE/4; i++ ) {
+            data_block_struct* single = double_indirect->index_block[i];
+            if ( single != NULL ) {
+                int j;
+                for ( j = 0; j < BLOCK_SIZE/4; j++ ) {
+                    data_block_struct* block = single->index_block[j];
+                    if ( block != NULL ) {
+                        int k;
+                        for ( k = 0; k < BLOCK_SIZE/16; k++ ) {
+                            entry = &block->entries[k];
+                            if ( entry != NULL && strcmp(entry->name, filename) == 0 ) {
+                                // return entry;
+                                return 0;
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+	return 0;
+}
+
 
 /**
  * rd_unlink
@@ -1026,16 +1158,23 @@ int rd_unlink(char* _pathname) {
 		return -1;
 	}
 	inode_struct* cur_dir_inode = &discos->inodes[current_dir_inode_num];
-
+    // printf("<>current dir inode info: \n");
+    // print_inode_info(current_dir_inode_num);
 	// clear inode, clear blocks, clear bitmap, update free block number in superblock
     printf("Clearing inode...\n");
+    // print_inode_info(file_inode_num);
 	clear_inode(file_inode);
 
 	// update the info in current dir inode
 	// find file entry from the current directory
-	dir_entry_struct* entry_in_cur_dir = find_entry_in_current_dir(cur_dir_inode, filename);
-	memset(entry_in_cur_dir, 0, sizeof(dir_entry_struct));
-	cur_dir_inode->size -= 16;
+	
+    // dir_entry_struct* entry_in_cur_dir = find_entry_in_current_dir(cur_dir_inode, filename);
+    // memset(entry_in_cur_dir, 0, sizeof(dir_entry_struct));
+    
+    clear_entry_in_current_dir(cur_dir_inode, filename);
+	
+	
+    cur_dir_inode->size -= 16;
 
 	// free inode ++
 	memset(file_inode, 0 , sizeof(inode_struct));
@@ -1046,7 +1185,7 @@ int rd_unlink(char* _pathname) {
 	free(filename);
 
     printf("Unlink %s success! \n", pathname);
-
+    // free(pathname);
 	return 0;
 
 }

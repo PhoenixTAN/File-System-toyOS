@@ -18,7 +18,7 @@
 #define INODE_SIZE              64      // in bytes
 #define INODE_ARRAY_SIZE        256     // in blocks
 #define BITMAP_SIZE             4       // in blocks
-#define MAX_NUM_FILE            1024  
+#define MAX_NUM_FILE            1024
 #define MAX_FILE_SIZE           1067008 // in bytes      
 #define INODE_NUM_DIRECT_PTR    8
 #define DATA_BLOCKS_NUM         7931   
@@ -136,6 +136,8 @@ void clear_inode_double_indirect(data_block_struct* double_indirect);
 void print_block_entries_info(int index);
 void print_inode_info(int index);
 void print_bitmap(unsigned char* map);
+
+int clear_entry_in_current_dir(inode_struct* cur_dir_inode, char* filename);
 
 file_object* create_file_object(int pid);
 file_descriptor_table* get_fd_table(int pid);
