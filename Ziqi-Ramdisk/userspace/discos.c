@@ -97,28 +97,14 @@ int main(void) {
     
         memset (pathname, 0, 80);
     }
-    for ( i = 0; i < 4; i++ ) { 
-        sprintf (pathname, PATH_PREFIX "/file%d", i);
-    
-        retval = CREAT (pathname, "reg\0", RD);
-    
-        if (retval < 0) {
-            fprintf (stderr, "creat: File creation error! status: %d (%s)\n", retval, pathname);
-            perror("Error!");
-      
-            if (i != 4)
-	            exit(EXIT_FAILURE);
-        }
-    
-        memset (pathname, 0, 80);
-    }   
+
     printf("<1> Test 1 created 1023 files succeeded!\n\n");
     print_bitmap(discos->bitmap);
     for ( i = 0; i < 65; i++ ) {
         print_block_entries_info(i);
     }
     /* Delete all the files created */
-    for (i = 0; i < 4; i++) { 
+    for (i = 0; i < MAX_NUM_FILE - 1; i++) { 
         
         sprintf (pathname, PATH_PREFIX "/file%d", i);
 
@@ -178,6 +164,14 @@ int main(void) {
     for ( i = 0; i < 5; i++ ) {
         print_inode_info(i);
     }
+
+    /* rd_open test */
+    retval = rd_open("/dir1", RD, 100);
+    printf("file_cursor: %d\n", retval);
+
+    rd_chmod("/dir1", RW);
+    retval = rd_open("/dir1", RD, 100);
+    printf("file_cursor: %d\n", retval);
 
 	/* free ramdisk */
 	free(discos);
@@ -1101,7 +1095,7 @@ int rd_chmod(char *_pathname, unsigned int mode) {
  * Return a value of -1 to indicate an access error, or if the file does not exist.
  * 
 */
-int rd_open(char *_pathname, unsigned int flags) {
+int rd_open(char *_pathname, unsigned int flags, int pid) {
 
     char* pathname = malloc(strlen(_pathname));
     strcpy(pathname, _pathname);
@@ -1135,15 +1129,55 @@ int rd_open(char *_pathname, unsigned int flags) {
         return -1;
     }
 
+    file_object* f_obj = create_file_object(pid);
 
+    if ( f_obj == NULL ) {
+        printf("Error: fd_table has been full.\n");
+        return -1;
+    }
 
-    return 0;
+    f_obj->cursor = 0;
+    f_obj->inode_ptr = file_inode;
+
+    return f_obj->cursor;
 }
 
 
-file_object* create_file_object() {
+file_object* create_file_object(int pid) {
+    
+    file_descriptor_table* f_objs = get_fd_table(pid);
 
+    if ( f_objs == NULL ) {
+        return NULL;
+    }
+
+    int i;
+    for ( i = 0; i < 1024; i++ ) {
+        if ( f_objs->file_objects[i].inode_ptr == NULL ) {
+            return &f_objs->file_objects[i];
+        }
+    }
 
     return NULL;
 }
 
+
+file_descriptor_table* get_fd_table(int pid) {
+    int i;
+
+    // find the pid
+    for ( i = 0; i < THERAD_POOL_SIZE; i++ ) {
+        if ( p_fd_table[i].pid == pid ) {
+            return &p_fd_table[i].fd_table;
+        }
+    }
+
+    // find an empty entry
+    for ( i = 0; i < THERAD_POOL_SIZE; i++ ) {
+        if ( p_fd_table[i].pid == 0 ) {
+            return &p_fd_table[i].fd_table;
+        }
+    }
+
+    return NULL;
+}

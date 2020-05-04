@@ -97,8 +97,7 @@ typedef struct FILESYS {
 typedef struct FILE_object {
     inode_struct* inode_ptr;
     unsigned int status;
-    unsigned int file_position;
-
+    unsigned int cursor;
 } file_object;
 
 
@@ -138,13 +137,14 @@ void print_block_entries_info(int index);
 void print_inode_info(int index);
 void print_bitmap(unsigned char* map);
 
-file_object* create_file_object();
+file_object* create_file_object(int pid);
+file_descriptor_table* get_fd_table(int pid);
 
 /* file operations */
 int rd_mkdir(char* pathname);
 int rd_create(char *pathname, char* type, unsigned int mode);
 int rd_unlink(char *pathname);
 int rd_chmod(char *pathname, unsigned int mode);
-int rd_open(char *pathname, unsigned int flags);
+int rd_open(char *pathname, unsigned int flags, int pid);
 
 #endif // !RAMDISK_H
