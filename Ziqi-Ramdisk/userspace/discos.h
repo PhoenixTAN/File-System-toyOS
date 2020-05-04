@@ -78,7 +78,7 @@ typedef struct FILESYS {
     // 4 blocks
     // 1 byte * 4 * 256 = 1024 bytes -> 1024 * 8 bit
     // 7931 blocks data blocks, 8192 blocks in all
-    char bitmap[BITMAP_SIZE*BLOCK_SIZE]; 
+    unsigned char bitmap[BITMAP_SIZE*BLOCK_SIZE]; 
 
     // 7931 blocks
     data_block_struct data_blocks[DATA_BLOCKS_NUM];
@@ -110,12 +110,14 @@ dir_entry_struct* get_next_dir_entry_single(data_block_struct* index_block, int 
 dir_entry_struct* get_next_dir_entry_double(data_block_struct* index_block, int _segment);
 void clear_inode_single_indirect(data_block_struct* single_indirect);
 void clear_inode_double_indirect(data_block_struct* double_indirect);
+void print_block_entries_info(int index);
+void print_inode_info(int index);
+void print_bitmap(unsigned char* map);
 
 /* file operations */
 int rd_mkdir(char* pathname);
-int rd_create(char *pathname, char* type, int mode);
+int rd_create(char *pathname, char* type, unsigned int mode);
 int rd_unlink(char *pathname);
-
-// int rd_chmod(char *pathname, mode_t mode);
+int rd_chmod(char *pathname, unsigned int mode);
 
 #endif // !RAMDISK_H

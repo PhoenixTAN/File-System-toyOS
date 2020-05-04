@@ -80,7 +80,7 @@ int main(void) {
     /* ****TEST 1: MAXIMUM file creation**** */
 
     /* Generate MAXIMUM regular files */
-    /*for ( i = 0; i < MAX_NUM_FILE - 1; i++ ) { 
+    for ( i = 0; i < MAX_NUM_FILE - 1; i++ ) { 
         sprintf (pathname, PATH_PREFIX "/file%d", i);
     
         retval = CREAT (pathname, "reg\0", RD);
@@ -94,26 +94,11 @@ int main(void) {
         }
     
         memset (pathname, 0, 80);
-    }   */
-    for ( i = 0; i < 1024 - 1; i++ ) { 
-        sprintf (pathname, PATH_PREFIX "/file%d", i);
-    
-        retval = CREAT (pathname, "reg\0", RD);
-    
-        if (retval < 0) {
-            fprintf (stderr, "creat: File creation error! status: %d (%s)\n", retval, pathname);
-            perror("Error!");
-      
-            if (i != 1024 - 1)
-	            exit(EXIT_FAILURE);
-        }
-    
-        memset (pathname, 0, 80);
     }   
     printf("<1> Test 1 created 1023 files succeeded!\n\n");
     print_bitmap(discos->bitmap);
     for ( i = 0; i < 65; i++ ) {
-        print_block_info(i);
+        print_block_entries_info(i);
     }
     /* Delete all the files created */
     for (i = 0; i < 1024 - 1; i++) { 
@@ -161,6 +146,21 @@ int main(void) {
     printf("<1> TEST 5 pass!\n\n");
     #endif // TEST5
 
+    // print root dir inode info
+    for ( i = 0; i < 5; i++ ) {
+        print_inode_info(i);
+    }
+
+    // test for chmod
+    printf("RD %u   ", RD);
+    printf("RW %u   ", RW);
+    printf("WR %u   ", WR);
+    printf("\n");
+    rd_chmod("/dir1", WR);
+
+    for ( i = 0; i < 5; i++ ) {
+        print_inode_info(i);
+    }
 
 	/* free ramdisk */
 	free(discos);
@@ -168,7 +168,8 @@ int main(void) {
 	return 0;
 }
 
-void print_block_info(int index) {
+
+void print_block_entries_info(int index) {
     printf("Block %d info: \n", index);
     data_block_struct* block = &discos->data_blocks[index];
     int i;
@@ -176,6 +177,17 @@ void print_block_info(int index) {
         printf("   Entry %d,  entry->name: %s, inode_num: %u\n", i, block->entries[i].name, block->entries[i].inode_num);
     }
 }
+
+
+void print_inode_info(int index) {
+    printf("Inode %d info:\n", index);
+    inode_struct* inode = &discos->inodes[index];
+    printf("     type: %s\n", inode->type);
+    printf("     size: %d\n", inode->size);
+    printf("     access: %u\n", inode->access);
+
+}
+
 
 void cmd_daemon() {
 	char cmd[CMD_MAX_LENGTH] = "Hello Discos!\n";
@@ -288,7 +300,7 @@ int rd_mkdir(char* pathname) {
 	}
 
     /* modify 23:22 */
-    int ret = rd_create(pathname, "dir\0", 1);
+    int ret = rd_create(pathname, "dir\0", RW);
 	free(pwd);
 	free(filename);
 
@@ -576,7 +588,7 @@ data_block_struct* allocate_data_block( int free_block_number ) {
  * else if the file corresponding to pathname already exists you should return -1, indicating an error. 
  * Note that you need to update the parent directory file, to include the new entry.
  * */
-int rd_create(char *pathname, char* type, int mode) {
+int rd_create(char *pathname, char* type, unsigned int mode) {
     
     printf("Creating file/directory ...\n");
 
@@ -630,6 +642,7 @@ int rd_create(char *pathname, char* type, int mode) {
 
     printf("inode type: %s\n", type);
     strcpy(free_inode->type, type);
+    free_inode->access = mode;
 
     /* update size */
     current_path_inode->size += 16;
@@ -1026,3 +1039,31 @@ int rd_unlink(char* _pathname) {
 
 }
 
+/**
+ * change the mode (i.e., access rights) of a file identified by the absolute pathname. 
+ * Return 0 if successful or a negative value for an error.
+*/
+int rd_chmod(char *_pathname, unsigned int mode) {
+
+    char* pathname = malloc(strlen(_pathname));
+    strcpy(pathname, _pathname);
+    printf("chmod %u %s...\n", mode, pathname);
+	// error occurs if you attempt to unlink the root directory file.
+	if ( strcmp(pathname, "/") == 0 ) {
+		printf("<1> rd_unlink Error occurs: you attempt to chmod the root dir.\n");
+		return -1;
+	}
+
+	// error occurs if the pathname does not exist
+	int file_inode_num = find_inode_number(pathname);
+	if ( file_inode_num == -1 ) {
+		printf("<1> rd_unlink Error occurs: the pathname does not exist.\n");
+		return -1;
+	}
+
+    inode_struct* file_inode = &discos->inodes[file_inode_num];
+    file_inode->access = mode;
+
+    return 0;
+
+}
