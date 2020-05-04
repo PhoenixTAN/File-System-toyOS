@@ -1,8 +1,21 @@
 #ifndef RAMDISK_H
 #define RAMDISK_H
 
-#include <stdio.h>
-#include <string.h>		// strcmp
+// #include <stdio.h>
+// #include <string.h>		// strcmp
+
+#include <linux/module.h>
+#include <linux/init.h>
+#include <linux/errno.h>
+#include <linux/proc_fs.h>
+#include <asm/uaccess.h>
+#include <linux/sched.h>
+#include <linux/wait.h>
+#include <linux/vmalloc.h>
+#include <linux/slab.h>
+#include <linux/string.h>
+#include <linux/ioctl.h>
+#include <linux/spinlock.h>
 
 /* getconf ARG_MAX */
 #define CMD_MAX_LENGTH          128		// 2097152 in bytes
@@ -15,18 +28,39 @@
 #define MAX_NUM_FILE            1024  
 #define MAX_FILE_SIZE           1067008 // in bytes      
 #define INODE_NUM_DIRECT_PTR    8
-#define DATA_BLOCKS_NUM         7931    
+#define DATA_BLOCKS_NUM         7931   
 
-typedef unsigned short uint16_t;
-typedef unsigned int uint32_t;
+#define MAGIC_NUM 88
+
+#define RD_INIT    _IOW(MAGIC_NUM, 0, ioctl_args_t*)
+#define RD_CREATE  _IOW(MAGIC_NUM, 1, ioctl_args_t*)
+#define RD_MKDIR   _IOW(MAGIC_NUM, 2, ioctl_args_t*)
+#define RD_OPEN    _IOW(MAGIC_NUM, 3, ioctl_args_t*)
+#define RD_CLOSE   _IOW(MAGIC_NUM, 4, ioctl_args_t*)
+#define RD_READ    _IOW(MAGIC_NUM, 5, ioctl_args_t*)
+#define RD_WRITE   _IOW(MAGIC_NUM, 6, ioctl_args_t*)
+#define RD_LSEEK   _IOW(MAGIC_NUM, 7, ioctl_args_t*)
+#define RD_UNLINK  _IOW(MAGIC_NUM, 8, ioctl_args_t*)
+#define RD_READDIR _IOW(MAGIC_NUM, 9, ioctl_args_t*)
+
+// typedef unsigned short uint16_t;
+// typedef unsigned int uint32_t;
 typedef union DATA_BLOCK data_block_struct;
+
+typedef struct ioctl_args {
+	int size;  //size of read
+	int mode;
+	int pid;
+	int fd;
+	char* pathname;
+} ioctl_args_t;
 
 /* Data structure for file system */
 
 /* super block */
 typedef struct SUPERBLOCK {
-    uint32_t free_blocks;   // 4 bytes
-    uint32_t free_inodes;   // 4 bytes
+    unsigned int free_blocks;   // 4 bytes
+    unsigned int free_inodes;   // 4 bytes
     
     char padding[248];         // 256 - 4 - 4
 
@@ -36,7 +70,7 @@ typedef struct SUPERBLOCK {
 /* directory entry */
 typedef struct DIR_ENTRY {
 	char name[14];              // filename or directory name
-	uint16_t inode_num;   // the corresponding inode index 2 bytes
+	unsigned short inode_num;   // the corresponding inode index 2 bytes
 } dir_entry_struct;
 
 
@@ -51,14 +85,14 @@ union DATA_BLOCK {
 /* i node */
 typedef struct I_NODE {
     char type[4];      // either “dir” or “reg” (4 bytes)
-    uint32_t size;      // current file size in bytes (4 bytes)
+    unsigned int size;      // current file size in bytes (4 bytes)
 
     data_block_struct *pointers[INODE_NUM_DIRECT_PTR];       // 8 direct block pointer
     
     data_block_struct *single_indirect_ptrs;   // 4 bytes
     data_block_struct *double_indirect_ptrs;    // 4 bytes
 
-    uint32_t access;    // 4 bytes
+    unsigned int access;    // 4 bytes
 
     char padding[12];
 
@@ -99,7 +133,7 @@ void cmd_daemon();
 int clear_bitmap(unsigned char* map, int index);
 int set_bitmap(unsigned char* map, int index);
 void parse_absolute_path(char* _path, char* _current_dir, char* _target);
-int find_inode_number(char* pathname);
+int my_find_inode_number(char* pathname);
 int get_free_block_num_from_bitmap(unsigned char* map);
 int get_free_inode_num();
 inode_struct* allocate_inode(int free_inode_num);
@@ -115,6 +149,8 @@ void clear_inode_double_indirect(data_block_struct* double_indirect);
 int rd_mkdir(char* pathname);
 int rd_create(char *pathname, char* type, int mode);
 int rd_unlink(char *pathname);
+
+void cleanup_fs();
 
 // int rd_chmod(char *pathname, mode_t mode);
 

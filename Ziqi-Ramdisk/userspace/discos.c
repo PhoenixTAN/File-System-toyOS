@@ -96,6 +96,21 @@ int main(void) {
         }
     
         memset (pathname, 0, 80);
+    }
+    for ( i = 0; i < 4; i++ ) { 
+        sprintf (pathname, PATH_PREFIX "/file%d", i);
+    
+        retval = CREAT (pathname, "reg\0", RD);
+    
+        if (retval < 0) {
+            fprintf (stderr, "creat: File creation error! status: %d (%s)\n", retval, pathname);
+            perror("Error!");
+      
+            if (i != 4)
+	            exit(EXIT_FAILURE);
+        }
+    
+        memset (pathname, 0, 80);
     }   
     printf("<1> Test 1 created 1023 files succeeded!\n\n");
     print_bitmap(discos->bitmap);
@@ -103,7 +118,7 @@ int main(void) {
         print_block_entries_info(i);
     }
     /* Delete all the files created */
-    for (i = 0; i < 1024 - 1; i++) { 
+    for (i = 0; i < 4; i++) { 
         
         sprintf (pathname, PATH_PREFIX "/file%d", i);
 
