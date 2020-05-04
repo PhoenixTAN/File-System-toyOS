@@ -18,7 +18,7 @@ cd
 // #define TEST2
 // #define TEST3
 // #define TEST4
-// #define TEST5
+#define TEST5
 // #define TEST6
 
 #define PATH_PREFIX ""
@@ -40,6 +40,7 @@ cd
 
 /* global variables */
 filesys_struct* discos;
+
 
 int main(void) {
 
@@ -94,7 +95,7 @@ int main(void) {
     
         memset (pathname, 0, 80);
     }   */
-    for ( i = 0; i < 135 - 1; i++ ) { 
+    for ( i = 0; i < 1024 - 1; i++ ) { 
         sprintf (pathname, PATH_PREFIX "/file%d", i);
     
         retval = CREAT (pathname, "reg\0", RD);
@@ -103,7 +104,7 @@ int main(void) {
             fprintf (stderr, "creat: File creation error! status: %d (%s)\n", retval, pathname);
             perror("Error!");
       
-            if (i != 135 - 1)
+            if (i != 1024 - 1)
 	            exit(EXIT_FAILURE);
         }
     
@@ -111,8 +112,11 @@ int main(void) {
     }   
     printf("<1> Test 1 created 1023 files succeeded!\n\n");
     print_bitmap(discos->bitmap);
+    for ( i = 0; i < 65; i++ ) {
+        print_block_info(i);
+    }
     /* Delete all the files created */
-    for (i = 0; i < 135 - 1; i++) { 
+    for (i = 0; i < 1024 - 1; i++) { 
         
         sprintf (pathname, PATH_PREFIX "/file%d", i);
 
@@ -164,6 +168,14 @@ int main(void) {
 	return 0;
 }
 
+void print_block_info(int index) {
+    printf("Block %d info: \n", index);
+    data_block_struct* block = &discos->data_blocks[index];
+    int i;
+    for ( i = 0; i < BLOCK_SIZE/16; i++ ) {
+        printf("   Entry %d,  entry->name: %s, inode_num: %u\n", i, block->entries[i].name, block->entries[i].inode_num);
+    }
+}
 
 void cmd_daemon() {
 	char cmd[CMD_MAX_LENGTH] = "Hello Discos!\n";
@@ -369,28 +381,24 @@ int find_inode_number(char* pathname) {
 
         // we cannot find the dir_entry in the first 8 direct entry
         // directory does not exits
-        /* uncomment return -1 here */
-        // return -1;
+
         printf("Looking for %s in single indirect\n", split_string);
 		/* try to find current dir in single indirect block */
-        data_block_struct* single_indirect_ptr = &discos->inodes[cur_node_num].single_indirect_ptrs;
+        data_block_struct* single_indirect_ptr = discos->inodes[cur_node_num].single_indirect_ptrs;
         // NULL pointer exception
-        if ( single_indirect_ptr == NULL ) {
-            printf("Single_indirect_ptr = NULL\n");
-        }
         if ( single_indirect_ptr != NULL ) {
             for( i = 0; i < BLOCK_SIZE/4; i++ ) {
                 // this data block contains 64 block pointers (see as index_block[] in the data struct)
                 cur_data_block = single_indirect_ptr->index_block[i];   
                 if ( cur_data_block != NULL ) {
-                    printf("cur_data_block != NULL\n");
+                    // printf("cur_data_block != NULL\n");
                     int j;
                     for ( j = 0; j < BLOCK_SIZE/16; j++ ) {
                         dir_entry_struct* entry = &cur_data_block->entries[j];
                         if ( entry == NULL ) {
                             printf("entry == NULL\n");
                         }
-                        printf("entry->name: %s    split_string: %s\n", entry->name, split_string);
+                        // printf("entry->name: %s    split_string: %s\n", entry->name, split_string);
                         if ( entry != NULL && strcmp(entry->name, split_string) == 0 ) {
                             cur_node_num = entry->inode_num;
                             printf("Single indirect: i=%dth pointer, j=%dth entry\n", i, j);
@@ -414,7 +422,7 @@ int find_inode_number(char* pathname) {
 		}
 
         /* try to find current dir in double indirect block */
-        data_block_struct* double_indirect_ptr = &discos->inodes[cur_node_num].double_indirect_ptrs;
+        data_block_struct* double_indirect_ptr = discos->inodes[cur_node_num].double_indirect_ptrs;
         // NULL pointer exception
         if ( double_indirect_ptr != NULL ) {
             int k;
@@ -618,7 +626,8 @@ int rd_create(char *pathname, char* type, int mode) {
     printf("strcpy free_dir_entry->name: %s    entry_name: %s\n", free_dir_entry->name, entry_name);
 
     printf("free inode number: %d\n", free_inode_num);
-    free_dir_entry->inode_num = free_inode_num;
+    free_dir_entry->inode_num = (unsigned short)free_inode_num;
+
     printf("inode type: %s\n", type);
     strcpy(free_inode->type, type);
 
