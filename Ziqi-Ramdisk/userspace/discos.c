@@ -1796,7 +1796,58 @@ int rd_lseek(int _fd, int offset, int pid) {
  * If developing DISCOS, you may only have threads within a single shared address space, 
  * in which case you should identify a buffer region into which your data is read.
 */
-int rd_read(int fd, char *address, int num_bytes, int pid) {
+int rd_read(int fd, char *data, int num_bytes, int pid) {
+    
+    /* preprocess: find this file object first */
+
+    // find the fd_table
+    file_object* f_obj = NULL;
+    
+    file_descriptor_table* f_objs = get_fd_table(pid);
+    if ( f_objs == NULL ) {
+        printf("rd_read: File descriptor table is NULL.\n");
+        return -1;  
+    }
+    
+    int i;
+    for ( i = 0; i < FD_TABLE_SIZE; i++ ) {
+        if ( f_objs->file_objects[i].pos == _fd ) {
+            f_obj = &f_objs->file_objects[i];
+            break;
+        }
+    }
+    
+    if ( f_obj == NULL ) {
+        printf("rd_read: Cannot find this file object.\n");
+        return -1;
+    }
+    
+    inode_struct* inode = f_obj->inode_ptr;
+    if ( inode == NULL ) {
+        printf("rd_read: inode is null.\n");
+        return -1;
+    }
+
+    if ( f_obj->usable != 1 ) {
+        printf("rd_read: Cnnot find file object. usable != 1 \n");
+        return -1;
+    }
+
+    if ( strcmp(inode->type, "dir\0") == 0 ) {
+        printf("rd_read: Cannot read a directory!");
+        return -1;
+    }
+
+
+    /* preprocess finish */
+
+    // TODO: read
+
+    
+
+    return 0;   // return the number of bytes actually read
 
 }
+
+
 
