@@ -1,13 +1,6 @@
 #include "discos.h"
 
 
-/*
-pwd
-ls
-cd 
-cd 
-*/
-
 /* Macro from test file */
 #define TEST1
 #define TEST2
@@ -39,8 +32,10 @@ cd
 #define WRITEONLY  O_WRONLY
 
 #define TEST_SINGLE_INDIRECT
+#define TEST_DOUBLE_INDIRECT
 static char data1[INODE_NUM_DIRECT_PTR*BLOCK_SIZE]; /* Largest data directly accessible */
 static char data2[BLOCK_SIZE/4*BLOCK_SIZE];     /* Single indirect data size */
+static char data3[BLOCK_SIZE/4*BLOCK_SIZE/4*BLOCK_SIZE]; /* Double indirect data size */
 
 /* global variables */
 filesys_struct* discos;
@@ -74,6 +69,7 @@ int main(void) {
     /* Some arbitrary data for our files */
     memset (data1, '1', sizeof (data1));
     memset (data2, '2', sizeof (data2));
+    memset (data3, '3', sizeof (data3));
 
     #ifdef TEST1
 
@@ -198,48 +194,53 @@ int main(void) {
     }
     printf("<1> TEST SINGLE INDIRECT DATA Success!!\n");
     print_inode_info(4);
+    #endif // TEST_SINGLE_INDIRECT
+
     #ifdef TEST_DOUBLE_INDIRECT
 
     /* Try writing to all double-indirect data blocks */
-    retval = WRITE (fd, data3, sizeof(data3));
+    retval = WRITE (fd, 100, data3, sizeof(data3));
     
+    if ( retval < 0 ) {
+        fprintf (stderr, "write: File write STAGE3 error! status: %d\n", retval);
+        exit(EXIT_FAILURE);
+    }
+    printf("<1> TEST DOUBLE INDIRECT DATA Success!!\n");
+    print_inode_info(4);
+    #endif // TEST_DOUBLE_INDIRECT
+
+    #endif // TEST2
+
+    #ifdef TEST4
+
+    /* ****TEST 4: Check permissions**** */
+    retval = CHMOD(PATH_PREFIX "/bigfile", RD); // Change bigfile to read-only
+  
     if (retval < 0) {
-        fprintf (stderr, "write: File write STAGE3 error! status: %d\n",
-            retval);
+        fprintf (stderr, "chmod: Failed to change mode! status: %d\n", retval);
 
         exit(EXIT_FAILURE);
     }
 
-    #endif // TEST_DOUBLE_INDIRECT
+    /* Now try to write to bigfile again, but with read-only permissions! */
+    retval = WRITE (fd, 100, data1, sizeof(data1));
+    if ( retval < 0 ) {
+        fprintf (stderr, "chmod: Tried to write to read-only file!\n");
+        printf ("Press a key to continue\n");
+        getchar(); // Wait for keypress
+    }
+  
+    /* Remove the biggest file */
 
-    #endif // TEST_SINGLE_INDIRECT
+    retval = UNLINK (PATH_PREFIX "/bigfile");
+	
+    if (retval < 0) {
+        fprintf (stderr, "unlink: /bigfile file deletion error! status: %d\n", retval);   
+        exit(EXIT_FAILURE);
+    }
 
-    #endif // TEST2
+    #endif // TEST4
 
-    // print root dir inode info
-    /*for ( i = 0; i < 5; i++ ) {
-        print_inode_info(i);
-    }*/
-
-    // test for chmod
-    /*printf("RD %u   ", RD);
-    printf("RW %u   ", RW);
-    printf("WR %u   ", WR);
-    printf("\n");
-    rd_chmod("/dir1", WR);
-
-    for ( i = 0; i < 5; i++ ) {
-        print_inode_info(i);
-    }*/
-    // rd_unlink("/dir1/dir2");
-    /* rd_open test */
-    /*
-    retval = rd_open("/dir1", RD, 100);
-    printf("file_cursor: %d\n", retval);
-
-    rd_chmod("/dir1", RW);
-    retval = rd_open("/dir1", RD, 100);
-    printf("file_cursor: %d\n", retval);*/
     
 	/* free ramdisk */
 	free(discos);
@@ -1472,7 +1473,7 @@ int rd_write(int fd, int pid, char *data, int num_bytes) {
     
     // access right check
     // WR RD WR
-    if ( f_obj->status == RD ) {
+    if ( f_obj->status == RD || inode->access == RD ) {
         printf("rd_write: Access denied! f_obj->status is %d\n", f_obj->status);
         return -1;
     }
@@ -1567,9 +1568,73 @@ int rd_write(int fd, int pid, char *data, int num_bytes) {
         }
     }
 
-    // write in double indirect blocks
+
+    seg = inode->size / BLOCK_SIZE;
+    offset = inode->size % BLOCK_SIZE;
+    // write in double indirect block
     if ( seg >= (8 + 64) && seg < (8 + 64 + 64*64) ) {
-        
+
+        data_block_struct* double_indirect = inode->double_indirect_ptrs;
+        if ( double_indirect == NULL ) {
+            printf("<1> rd_write: we need a new double_indirect pointer.\n");
+            int free_block_num = get_free_block_num_from_bitmap(discos->bitmap);
+            if ( free_block_num == -1 ) {
+                printf("<1> rd_write: no free block found!\n");
+                return -1;
+            }
+            inode->double_indirect_ptrs = allocate_data_block(free_block_num);
+            double_indirect = inode->double_indirect_ptrs;
+        }
+
+        seg = seg - 8 - 64;
+
+        // iterate the single indirect index blocks
+        for ( i = 0; i < BLOCK_SIZE/4; i++ ) {
+            data_block_struct* single_indirect = double_indirect->index_block[i];
+            if ( single_indirect == NULL ) {
+                printf("<1> rd_write: we need a new single_indirect poitner after double_indirect.\n");
+                int free_block_num = get_free_block_num_from_bitmap(discos->bitmap);
+                if ( free_block_num == -1 ) {
+                    printf("<1> rd_write: no free block found!\n");
+                    return -1;
+                }
+                inode->double_indirect_ptrs->index_block[i] = allocate_data_block(free_block_num);
+                single_indirect = inode->double_indirect_ptrs->index_block[i];
+            }
+            
+            seg = seg/64;
+            int j;
+            for ( j = seg; j < BLOCK_SIZE/4; j++ ) {
+                data_block_struct* block = single_indirect->index_block[j];
+                if ( block == NULL ) {
+                    int free_block_num = get_free_block_num_from_bitmap(discos->bitmap);
+                    if ( free_block_num == -1 ) {
+                        printf("<1> rd_write: no free block found!\n");
+                        return -1;
+                    }
+                    single_indirect->index_block[j] = allocate_data_block(free_block_num);
+                    block = single_indirect->index_block[j];
+                }
+
+                // begin to write
+                int k;
+                for ( k = offset; k < BLOCK_SIZE; k++ ) {
+                    if ( data[written_bytes] != '\0' ) {
+                        block->data[k] = data[written_bytes];
+                        written_bytes += 1;
+                        f_obj->cursor += 1;
+                        inode->size += 1;
+                        if ( written_bytes == num_bytes ) {
+                            printf("rd_write: written_byte=%d\n", written_bytes);
+                            return written_bytes;
+                        }
+                    }
+                }
+
+            }
+
+        }
+
     }
 
     if ( seg >= (8 + 64 + 64*64) ) {
