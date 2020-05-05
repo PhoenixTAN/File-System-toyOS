@@ -1,8 +1,6 @@
 #include "userspace.h"
-
-
-
 static int fd;
+int ret;
 
 int rd_init() {
     int ret;
@@ -60,22 +58,15 @@ int rd_open(char* pathname, unsigned int mode) {
 }
 
 int rd_write(int _fd, char* data, int number_of_data) {
-    int ret;
     ioctl_args_t* args = malloc(sizeof(ioctl_args_t));
     memset(args, 0, sizeof(ioctl_args_t));
-    args->pid = 100; //(int)getpid();
-    printf("<> rd_write: args->pid=%d\n", args->pid);
-
+    args->pid = (int)getpid();
     args->fd = _fd;
     args->size = number_of_data;
     args->data = data;
     printf("userspace write\n");
     ret = 0;
     ret = ioctl(fd, RD_WRITE, args);
-    /*if (ret < 0) {
-        fprintf(stderr, "%s\n", explain_ioctl(fd, RDD_WRITE, args));
-        exit(EXIT_FAILURE);
-    }*/
     printf("userspace ret: %d\n", ret);
     free(args);
     return ret;

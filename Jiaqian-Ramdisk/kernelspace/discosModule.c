@@ -61,7 +61,7 @@ static int discos_ioctl(struct inode *inode, struct file *file, unsigned int cmd
 		// 	vfree(args);
 		// 	/*spin_unlock(&my_lock);*/
 		// 	return ret;
-		case RDD_WRITE:
+		case RD_WRITE:
 			printk("<1> Begin rd write\n");
 			data = vmalloc(args->size);
 			flag = 1;
