@@ -1842,9 +1842,33 @@ int rd_read(int _fd, char *data, int num_bytes, int pid) {
     /* preprocess finish */
 
     // TODO: read
+    int bytes_read = 0;
+    unsigned int cursor = f_obj->cursor;
+    int bytes_to_read = num_bytes;
+    if ( num_bytes > inode->size - cursor ) {
+        printf("rd_read: num_bytes bigger than file size!\n");
+        bytes_to_read = inode->size;
+        return -1;
+    }
+
+    // a temp buffer to store the 
+    char* read_buffer = malloc(sizeof(bytes_to_read));
+
+    int seg = cursor / BLOCK_SIZE;
+    int offset = cursor % BLOCK_SIZE;
+
+    /* read in the direct blocks */
+    for ( i = seg; i < INODE_NUM_DIRECT_PTR; i++ ) {
+
+    }
+
+    /* read in single indirect */
 
 
+    /* read in double indirect */
 
+
+    free(read_buffer);
     return 0;   // return the number of bytes actually read
 
 }
