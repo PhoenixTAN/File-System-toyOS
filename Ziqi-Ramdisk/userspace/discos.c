@@ -38,7 +38,9 @@ cd
 #define READWRITE  O_RDWR
 #define WRITEONLY  O_WRONLY
 
+#define TEST_SINGLE_INDIRECT
 static char data1[INODE_NUM_DIRECT_PTR*BLOCK_SIZE]; /* Largest data directly accessible */
+static char data2[BLOCK_SIZE/4*BLOCK_SIZE];     /* Single indirect data size */
 
 /* global variables */
 filesys_struct* discos;
@@ -71,6 +73,7 @@ int main(void) {
 
     /* Some arbitrary data for our files */
     memset (data1, '1', sizeof (data1));
+    memset (data2, '2', sizeof (data2));
 
     #ifdef TEST1
 
@@ -182,18 +185,19 @@ int main(void) {
         print_data_block(i);
     }
 
+    print_inode_info(4);
+
     #ifdef TEST_SINGLE_INDIRECT
     
     /* Try writing to all single-indirect data blocks */
-    retval = WRITE (fd, data2, sizeof(data2));
+    retval = WRITE (fd, 100, data2, sizeof(data2));
     
-    if (retval < 0) {
-        fprintf (stderr, "write: File write STAGE2 error! status: %d\n",
-            retval);
-
+    if ( retval < 0 ) {
+        fprintf (stderr, "write: File write STAGE2 error! status: %d\n", retval);
         exit(EXIT_FAILURE);
     }
-
+    printf("<1> TEST SINGLE INDIRECT DATA Success!!\n");
+    print_inode_info(4);
     #ifdef TEST_DOUBLE_INDIRECT
 
     /* Try writing to all double-indirect data blocks */
@@ -913,6 +917,7 @@ dir_entry_struct* get_next_entry(inode_struct* node) {
     }
 
     /* double indrect block */
+    // TODO:
     if ( seg >= (8 + 64) && seg < (8 + 64 + 64*64) ) {
         if ( node ->double_indirect_ptrs ==  NULL ) {
             printf("Double indirect (NULL). We need a new block.\n");
@@ -1115,6 +1120,7 @@ int clear_entry_in_current_dir(inode_struct* cur_dir_inode, char* filename) {
     }
 
     // find entry in single indirect
+    // TODO: clear the single indirect index block
     data_block_struct* single_indirect = cur_dir_inode->single_indirect_ptrs;
     if ( single_indirect != NULL ) {
         // int nonEmptyBlocks = 0;
@@ -1456,7 +1462,7 @@ int rd_write(int fd, int pid, char *data, int num_bytes) {
         printf("rd_write: Access denied! f_obj->status is %d\n", f_obj->status);
         return -1;
     }
-    printf("Therere!\n");
+    
     // begin to write
     int written_bytes = 0;
     unsigned int cursor = f_obj->cursor;
@@ -1487,6 +1493,7 @@ int rd_write(int fd, int pid, char *data, int num_bytes) {
                 direct_block->data[j] = data[written_bytes];
                 written_bytes += 1;
                 f_obj->cursor += 1;
+                inode->size += 1;   // update file size to update the seg and offset
                 if ( written_bytes == num_bytes ) {
                     // finish 
                     printf("rd_write: written_byte=%d\n", written_bytes);
@@ -1496,30 +1503,67 @@ int rd_write(int fd, int pid, char *data, int num_bytes) {
         }
     }
 
-    // write in the direct blocks
-    /*for ( i = 0; i < INODE_NUM_DIRECT_PTR; i++ ) {
-        data_block_struct* direct_block = inode->pointers[i];
-        
-        if ( direct_block == NULL ) {
-            // get a new block if this direct block is empty
-
-            continue;
+    // written_bytes is not zero here.
+    seg = inode->size / BLOCK_SIZE;
+    offset = inode->size % BLOCK_SIZE;
+    // write in the single indirect blocks
+    // single indirect blocks start from the 9th block
+    if ( seg >= 8 && seg < (8+64) ) {
+        data_block_struct* single_indirect = inode->single_indirect_ptrs;
+        if ( single_indirect == NULL ) {
+            printf("<1> rd_write: we need a new single_indirect poitner.\n");
+            int free_block_num = get_free_block_num_from_bitmap(discos->bitmap);
+            if ( free_block_num == -1 ) {
+                printf("<1> rd_write: no free block found!\n");
+                return -1;
+            }
+            inode->single_indirect_ptrs = allocate_data_block(free_block_num); 
+            single_indirect = inode->single_indirect_ptrs;
         }
-        int j;
-        for ( j = 0; j < BLOCK_SIZE; j++ ) {
-            if ( data[written_bytes] != '\0' ) {
-                direct_block->data[j] = data[written_bytes];
-                written_bytes += 1;
-                f_obj->cursor += 1;
-                if ( written_bytes == num_bytes ) {
-                    // finish 
-                    printf("rd_write: written_byte=%d\n", written_bytes);
-                    return written_bytes;
+        
+        // iterate the 64 index block
+        seg = seg - 8;      // single indirect blocks start from the 9th block
+        for ( i = seg; i < BLOCK_SIZE/4; i++ ) {
+            data_block_struct* block = single_indirect->index_block[i];
+            if ( block == NULL ) {
+                int free_block_num = get_free_block_num_from_bitmap(discos->bitmap);
+                if ( free_block_num == -1 ) {
+                    printf("<1> rd_write: no free block found!\n");
+                    return -1;
+                }
+                single_indirect->index_block[i] = allocate_data_block(free_block_num);
+                block = single_indirect->index_block[i];
+            }
+
+            // begin to write
+            int j;
+            for ( j = offset; j < BLOCK_SIZE; j++ ) {
+                if ( data[written_bytes] != '\0' ) {
+                    block->data[j] = data[written_bytes];
+                    written_bytes += 1;
+                    f_obj->cursor += 1;
+                    inode->size += 1;   // update file size to update the seg and offset
+                    if ( written_bytes == num_bytes ) {
+                        // finish 
+                        printf("rd_write: written_byte=%d\n", written_bytes);
+                        return written_bytes;
+                    }
                 }
             }
         }
-    }*/
-    printf("Hererere!\n");
+    }
+
+    // write in double indirect blocks
+    if ( seg >= (8 + 64) && seg < (8 + 64 + 64*64) ) {
+        
+    }
+
+    if ( seg >= (8 + 64 + 64*64) ) {
+        printf("<1> rd_write: MAXIMUM FILE LIMIT!\n");
+        return written_bytes;
+    }
+
+    
     return 0;   // the actual number of byte written
 
 }
