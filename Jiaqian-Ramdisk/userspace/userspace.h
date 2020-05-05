@@ -26,7 +26,12 @@ typedef struct ioctl_args {
 	int pid;
 	int fd;
 	char* pathname;
+	char* data;
 } ioctl_args_t;
 
 int rd_init();
-int rd_creat(char* pathname);
+int rd_creat(char* pathname, unsigned int mode);
+int rd_unlink(char* pathname);
+int rd_open(char* pathname, unsigned int mode);
+int rd_mkdir(char* pathname);
+int rd_write(int fd, char* data, int number_of_data);

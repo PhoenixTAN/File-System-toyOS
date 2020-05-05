@@ -18,7 +18,7 @@
 
 #define USE_RAMDISK
 #define TEST1
-// #define TEST2
+#define TEST2
 // #define TEST3
 // #define TEST4
 #define TEST5
@@ -69,7 +69,7 @@
 #define TEST_DOUBLE_INDIRECT
 
 
-#define MAX_FILES 900
+#define MAX_FILES 4
 #define BLK_SZ 256		/* Block size */
 #define DIRECT 8		/* Direct pointers in location attribute */
 #define PTR_SZ 4		/* 32-bit [relative] addressing */
@@ -103,7 +103,7 @@ int main () {
   for (i = 0; i < MAX_FILES; i++) { 
     sprintf (pathname, PATH_PREFIX "file%d", i);
     
-    retval = CREAT (pathname);
+    retval = CREAT (pathname, RD);
     
     if (retval < 0) {
       fprintf (stderr, "creat: File creation error! status: %d (%s)\n",
@@ -145,7 +145,7 @@ int main () {
 
   
   /* Generate one LARGEST file */
-  retval = CREAT (PATH_PREFIX "/bigfile", RW);
+  retval = CREAT (PATH_PREFIX "bigfile", RW);
 
   if (retval < 0) {
     fprintf (stderr, "creat: File creation error! status: %d\n",
@@ -154,13 +154,17 @@ int main () {
     exit(EXIT_FAILURE);
   }
 
-  retval =  OPEN (PATH_PREFIX "/bigfile", READWRITE); /* Open file to write to it */
+  retval =  OPEN (PATH_PREFIX "bigfile", READWRITE); /* Open file to write to it */
   
   if (retval < 0) {
     fprintf (stderr, "open: File open error! status: %d\n",
 	     retval);
 
     exit(EXIT_FAILURE);
+  }
+
+  if(retval >= 0) {
+    printf("Current cursor: %d\n", retval);
   }
 
   fd = retval;			/* Assign valid fd */
@@ -175,29 +179,31 @@ int main () {
     exit(EXIT_FAILURE);
   }
 
+  printf("Write success!!!");
+
 #ifdef TEST_SINGLE_INDIRECT
   
   /* Try writing to all single-indirect data blocks */
-  retval = WRITE (fd, data2, sizeof(data2));
+  // retval = WRITE (fd, data2, sizeof(data2));
   
-  if (retval < 0) {
-    fprintf (stderr, "write: File write STAGE2 error! status: %d\n",
-	     retval);
+  // if (retval < 0) {
+  //   fprintf (stderr, "write: File write STAGE2 error! status: %d\n",
+	//      retval);
 
-    exit(EXIT_FAILURE);
-  }
+  //   exit(EXIT_FAILURE);
+  // }
 
 #ifdef TEST_DOUBLE_INDIRECT
 
   /* Try writing to all double-indirect data blocks */
-  retval = WRITE (fd, data3, sizeof(data3));
+  // retval = WRITE (fd, data3, sizeof(data3));
   
-  if (retval < 0) {
-    fprintf (stderr, "write: File write STAGE3 error! status: %d\n",
-	     retval);
+  // if (retval < 0) {
+  //   fprintf (stderr, "write: File write STAGE3 error! status: %d\n",
+	//      retval);
 
-    exit(EXIT_FAILURE);
-  }
+  //   exit(EXIT_FAILURE);
+  // }
 
 #endif // TEST_DOUBLE_INDIRECT
 

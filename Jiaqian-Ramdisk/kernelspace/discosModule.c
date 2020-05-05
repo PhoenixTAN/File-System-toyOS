@@ -35,13 +35,13 @@ static int discos_ioctl(struct inode *inode, struct file *file, unsigned int cmd
 			// vfree(args);
 			/*spin_unlock(&my_lock);*/
 			return ret;
-		// case RD_OPEN:
-		// 	printk("<1> Opening %s\n", args->pathname);
-		// 	// Send fd back to user space
-		// 	ret = open(args->pid, args->pathname);
-		// 	vfree(args);
-		// 	/*spin_unlock(&my_lock);*/
-		// 	return ret;
+		case RD_OPEN:
+			printk("<1> Opening %s\n", args->pathname);
+			// Send fd back to user space
+			ret = rd_open(args->pathname, args->mode, args->pid);
+			kfree(args);
+			/*spin_unlock(&my_lock);*/
+			return ret;
 		// case RD_CLOSE:
 		// 	printk("<1> Switch case close\n");
 		// 	ret = close(args->pid, args->fd_num);
@@ -53,35 +53,39 @@ static int discos_ioctl(struct inode *inode, struct file *file, unsigned int cmd
 		// 	vfree(args);
 		// 	/*spin_unlock(&my_lock);*/
 		// 	return ret;
-		// case RD_WRITE:
-		// 	data = vmalloc(args->num_bytes);
-		// 	flag = 1;
-		// 	left = args->num_bytes;
-		// 	from = args->address;
-		// 	while (flag) {
-		// 		if (left > 4096) {
-		// 			ret = copy_from_user(data, from, 4096);
-		// 			left -= 4096;
-		// 			data += 4096;
-		// 			from += 4096;
-		// 			printk("<1> ret: %d left:%d\n", ret, left);
-		// 		} else {
-		// 			ret = copy_from_user(data, from, left);
-		// 			data += left;
-		// 			printk("<1> ret: %d left:%d\n", ret, left);
-		// 			flag = 0;
-		// 		}
-		// 	}
-		// 	printk("<1> Here!\n");
-		// 	/*copy_from_user(data, args->address, args->num_bytes);*/
-		// 	/*printk("<1> Got write data from user: %s\n",data);*/
-		// 	ret = write(args->fd_num, data - args->num_bytes, args->num_bytes, args->pid);
-		// 	vfree(data);
-		// 	/*spin_unlock(&my_lock);*/
-		// 	return ret;
+		case RD_WRITE:
+			printk("<1> Begin rd write\n");
+			data = kmalloc(args->size, GFP_KERNEL);
+			flag = 1;
+			left = args->size;
+			from = args->data;
+			while (flag) {
+				if (left > 4096) {
+					ret = copy_from_user(data, from, 4096);
+					left -= 4096;
+					data += 4096;
+					from += 4096;
+					printk("<1> ret: %d left:%d\n", ret, left);
+				} else {
+					ret = copy_from_user(data, from, left);
+					data += left;
+					printk("<1> ret: %d left:%d\n", ret, left);
+					flag = 0;
+				}
+			}
+			printk("<1> Here!\n");
+			/*copy_from_user(data, args->address, args->num_bytes);*/
+			/*printk("<1> Got write data from user: %s\n",data);*/
+			ret = rd_write(args->fd, args->pid, data, args->size);
+			kfree(data);
+			kfree(args);
+			/*spin_unlock(&my_lock);*/
+			printk("Now ret: %d\n", ret);
+			return ret;
  		case RD_CREATE:
 			// spin_lock(&my_lock);
-			ret = rd_create(pathname, "reg\0", 1);
+			printk("RD_CREATE: MODE:%d\n", args->mode);
+			ret = rd_create(pathname, "reg\0", args->mode);
 			kfree(pathname);
 			kfree(args);
 			// spin_unlock(&my_lock);

@@ -40,6 +40,7 @@ cd
 
 /* global variables */
 filesys_struct* discos;
+process_fd_table* p_fd_table;
 
 
 // int main(void) {
@@ -252,6 +253,9 @@ int get_free_block_num_from_bitmap(unsigned char* map) {
 int init_file_sys() {
 	int retval;
 	discos = (filesys_struct*)vmalloc(sizeof(filesys_struct));
+    memset(discos, 0, RAMDISK_SIZE);
+    p_fd_table = (process_fd_table*)vmalloc(sizeof(process_fd_table)*THERAD_POOL_SIZE);
+    memset(p_fd_table, 0, sizeof(process_fd_table)*THERAD_POOL_SIZE);
 	if ( !discos ) {
 		printk("discos malloc fail.\n");
 		return -1;
@@ -276,6 +280,8 @@ int rd_mkdir(char* pathname) {
     printk("rd_mkdir strlen(pathname): %d\n", len);
 	pwd = vmalloc(len);
 	filename = vmalloc(len);
+    memset(pwd, 0, strlen(pwd));
+    memset(filename, 0, strlen(filename));
 	if(strcmp(pathname, "/") == 0 && discos->superblock.free_inodes == MAX_NUM_FILE) {
 		printk("init root dir\n");
 		discos->superblock.free_inodes--;
@@ -328,6 +334,7 @@ int my_find_inode_number(char* pathname) {
 
     char* temp_pathname, *found;
  	temp_pathname = vmalloc(strlen(pathname));
+    memset(temp_pathname, 0, strlen(temp_pathname));
 	strcpy(temp_pathname, pathname);
 	// temp_pathname = vmalloc(strlen(pathname));
 	// strcpy(temp_pathname, pathname);
@@ -603,6 +610,8 @@ int rd_create(char *pathname, char* type, int mode) {
     // get the file/directory name you want to create
     char *current_path = vmalloc(strlen(pathname));
     char *entry_name = vmalloc(strlen(pathname));
+    memset(current_path, 0, strlen(current_path));
+    memset(entry_name, 0, strlen(entry_name));
     parse_absolute_path(pathname, current_path, entry_name);
     printk("parse: current path: %s    entry_name: %s\n", current_path, entry_name);
 
@@ -971,6 +980,7 @@ dir_entry_struct* find_entry_in_current_dir(inode_struct* cur_dir_inode, char* f
 int rd_unlink(char* _pathname) {
 	// deep copy the path name
 	char* pathname = vmalloc(strlen(_pathname));
+    memset(pathname, 0, strlen(pathname));
     strcpy(pathname, _pathname);
     printk("Unlinking %s ...\n", pathname);
 	// error occurs if you attempt to unlink the root directory file.
@@ -1002,6 +1012,8 @@ int rd_unlink(char* _pathname) {
 
 	char* current_dir = vmalloc(strlen(pathname));
 	char* filename = vmalloc(strlen(pathname));
+    memset(current_dir, 0, strlen(current_dir));
+    memset(filename, 0, strlen(filename));
 	parse_absolute_path(pathname, current_dir, filename);
 
 	int current_dir_inode_num = my_find_inode_number(current_dir);
@@ -1015,10 +1027,12 @@ int rd_unlink(char* _pathname) {
     printk("Clearing inode...\n");
 	my_clear_inode(file_inode);
 
+    clear_entry_in_current_dir(cur_dir_inode, filename);
+
 	// update the info in current dir inode
 	// find file entry from the current directory
-	dir_entry_struct* entry_in_cur_dir = find_entry_in_current_dir(cur_dir_inode, filename);
-	memset(entry_in_cur_dir, 0, sizeof(dir_entry_struct));
+	// dir_entry_struct* entry_in_cur_dir = find_entry_in_current_dir(cur_dir_inode, filename);
+	// memset(entry_in_cur_dir, 0, sizeof(dir_entry_struct));
 	cur_dir_inode->size -= 16;
 
 	// free inode ++
@@ -1031,10 +1045,387 @@ int rd_unlink(char* _pathname) {
 
     printk("Unlink %s success! \n", pathname);
 
+    vfree(pathname);
+
 	return 0;
 
 }
 
 void cleanup_fs() {
     vfree(discos);
+    vfree(p_fd_table);
+}
+
+
+/**
+ * change the mode (i.e., access rights) of a file identified by the absolute pathname. 
+ * Return 0 if successful or a negative value for an error.
+*/
+int rd_chmod(char *_pathname, unsigned int mode) {
+
+    char* pathname = kmalloc(strlen(_pathname), GFP_KERNEL);
+    memset(pathname, 0, strlen(pathname));
+    strcpy(pathname, _pathname);
+    printk("chmod %u %s...\n", mode, pathname);
+	
+	if ( strcmp(pathname, "/") == 0 ) {
+		printk("<1> rd_chmod Error occurs: you attempt to chmod the root dir.\n");
+		return -1;
+	}
+
+	// error occurs if the pathname does not exist
+	int file_inode_num = my_find_inode_number(pathname);
+	if ( file_inode_num == -1 ) {
+		printk("<1> rd_chmod Error occurs: the pathname does not exist.\n");
+		return -1;
+	}
+
+    inode_struct* file_inode = &discos->inodes[file_inode_num];
+    file_inode->access = mode;
+
+    kfree(pathname);
+
+    return 0;
+
+}
+
+
+/**
+ * open an existing file corresponding to pathname (which can be a regular or directory file) or 
+ * report an error if file does not exist. 
+ * When opening a file, you should return a file descriptor value 
+ * that will index into the process' ramdisk file descriptor table. As stated earlier, 
+ * this table entry will contain a pointer to a file object. 
+ * You can assume the file object has status=flags (unless there is an error), 
+ * and the file position is set to 0. 
+ * An error can occur when opening a file if the file does not exist 
+ * or if the flags value overrides the access rights when the file was created. 
+ * For example, a process should not be allowed to open a file for writing if its access rights are read-only. 
+ * Finally, you can assume that flags can be any one of READONLY, WRITEONLY, or READWRITE. 
+ * Return a value of -1 to indicate an access error, or if the file does not exist.
+ * 
+*/
+int rd_open(char *_pathname, unsigned int flags, int pid) {
+
+    char* pathname = kmalloc(strlen(_pathname), GFP_KERNEL);
+    memset(pathname, 0, strlen(pathname));
+    strcpy(pathname, _pathname);
+    printk("Opening %u %s...\n", flags, pathname);
+	
+	if ( strcmp(pathname, "/") == 0 ) {
+		printk("<1> rd_open Error occurs: you attempt to open the root dir.\n");
+		return -1;
+	}
+
+	// error occurs if the pathname does not exist
+	int file_inode_num = my_find_inode_number(pathname);
+	if ( file_inode_num == -1 ) {
+		printk("<1> rd_open Error occurs: the pathname does not exist.\n");
+		return -1;
+	}
+
+    inode_struct* file_inode = &discos->inodes[file_inode_num];
+
+    // check the access right
+    if ( flags == RD && file_inode->access == WR ) {
+        printk("<1> rd_open Error occurs: No access right. flags=%d, access=%d\n", flags, file_inode->access);
+        return -1;
+    }
+    if ( flags == WR && file_inode->access == RD ) {
+        printk("<1> rd_open Error occurs: No access right. flags=%d, access=%d\n", flags, file_inode->access);
+        return -1;
+    }
+    if ( flags == RW && file_inode->access != RW ) {
+        printk("<1> rd_open Error occurs: No access right. flags=%d, access=%d\n", flags, file_inode->access);
+        return -1;
+    }
+
+    file_object* f_obj = create_file_object(pid);
+
+    if ( f_obj == NULL ) {
+        printk("Error: fd_table has been full.\n");
+        return -1;
+    }
+
+    f_obj->cursor = 0;
+    f_obj->inode_ptr = file_inode;
+    f_obj->status = flags;
+
+    kfree(pathname);
+
+    return f_obj->pos;
+}
+
+
+file_object* create_file_object(int pid) {
+    
+    file_descriptor_table* f_objs = get_fd_table(pid);
+
+    if ( f_objs == NULL ) {
+        return NULL;
+    }
+
+    int i;
+    for ( i = 0; i < FD_TABLE_SIZE; i++ ) {
+        if ( f_objs->file_objects[i].usable == 0 ) {
+
+            f_objs->file_objects[i].pos = i;
+            f_objs->file_objects[i].usable = 1;
+            printk("In create_file_object pos: %d\n", f_objs->file_objects[i].pos);
+            return &f_objs->file_objects[i];
+        }
+    }
+
+    return NULL;
+}
+
+
+file_descriptor_table* get_fd_table(int pid) {
+    int i;
+
+    // find the pid
+    for ( i = 0; i < THERAD_POOL_SIZE; i++ ) {
+        if ( p_fd_table[i].pid == pid ) {
+            return &p_fd_table[i].fd_table;
+        }
+    }
+
+    // find an empty entry
+    for ( i = 0; i < THERAD_POOL_SIZE; i++ ) {
+        if ( p_fd_table[i].pid == 0 ) {
+            return &p_fd_table[i].fd_table;
+        }
+    }
+
+    return NULL;
+}
+
+int clear_entry_in_current_dir(inode_struct* cur_dir_inode, char* filename) {
+    printk("clearing entry in current dir...\n");
+	dir_entry_struct* entry;  
+    int findEntry = 0; 
+	int i;
+	for ( i = 0; i < INODE_NUM_DIRECT_PTR; i++ ) {
+		data_block_struct* block = cur_dir_inode->pointers[i];
+        int nonEmptyEntries = 0;
+		if ( block != NULL ) {
+			// iterate the block to find the entry
+			int j;
+			for ( j = 0; j < BLOCK_SIZE/16; j++ ) {
+				entry = &block->entries[j];
+                if ( entry->inode_num != 0 ) {
+                    // printf("  entry->inode_num %d\n", entry->inode_num);
+                    nonEmptyEntries += 1;
+                }
+                if ( entry != NULL && strcmp(entry->name, filename) == 0 ) {
+                    
+                    memset(entry, 0, sizeof(dir_entry_struct));
+                    entry = NULL;
+                    findEntry = 1;
+                }
+			}
+		}
+        // printf("nonEmptyEntries: %d   findEntry=%d\n", nonEmptyEntries, findEntry);
+        if ( findEntry == 1 && nonEmptyEntries == 1 ) {
+            clear_bitmap(discos->bitmap, cur_dir_inode->pointers[i] - &discos->data_blocks[0]);
+            cur_dir_inode->pointers[i] = NULL;
+            print_bitmap(discos->bitmap);
+            
+        }
+	}
+
+
+    if ( findEntry == 1 ) {
+        return 0;
+    }
+
+    // find entry in single indirect
+    data_block_struct* single_indirect = cur_dir_inode->single_indirect_ptrs;
+    if ( single_indirect != NULL ) {
+        // int nonEmptyBlocks = 0;
+        for ( i = 0; i < BLOCK_SIZE/4; i++ ) {
+            data_block_struct* block = single_indirect->index_block[i];
+            int nonEmptyEntries = 0;
+            if ( block != NULL ) {
+                int j;
+                for ( j = 0; j < BLOCK_SIZE/16; j++ ) {
+                    entry = &block->entries[j];
+                    if ( entry->inode_num != 0 ) {
+                        nonEmptyEntries += 1;
+                    }
+                    if ( entry != NULL && strcmp(entry->name, filename) == 0 ) {
+                        // return entry;
+                        findEntry = 1;
+                        memset(entry, 0, sizeof(dir_entry_struct));
+                        entry = NULL;
+                        // return 0;
+                    }
+                }
+            }
+            // printf("nonEmptyEntries: %d   findEntry=%d\n", nonEmptyEntries, findEntry);
+            if ( findEntry == 1 && nonEmptyEntries == 1 ) {
+                printk("<><> clear bit %d\n", single_indirect->index_block[i] -  &discos->data_blocks[0]);
+                clear_bitmap(discos->bitmap, single_indirect->index_block[i] -  &discos->data_blocks[0]);
+                single_indirect->index_block[i] = NULL;
+                print_bitmap(discos->bitmap);
+                return 0;
+            }
+        }
+    }
+
+    // find entry in double indirect
+    data_block_struct* double_indirect = cur_dir_inode->double_indirect_ptrs;
+    if ( double_indirect != NULL ) {
+        // iterate single indirect
+        for ( i = 0; i < BLOCK_SIZE/4; i++ ) {
+            data_block_struct* single = double_indirect->index_block[i];
+            if ( single != NULL ) {
+                int j;
+                for ( j = 0; j < BLOCK_SIZE/4; j++ ) {
+                    data_block_struct* block = single->index_block[j];
+                    if ( block != NULL ) {
+                        int k;
+                        for ( k = 0; k < BLOCK_SIZE/16; k++ ) {
+                            entry = &block->entries[k];
+                            if ( entry != NULL && strcmp(entry->name, filename) == 0 ) {
+                                // return entry;
+                                return 0;
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+	return 0;
+}
+
+/**
+ * write up to num_bytes from the specified address in the calling process to 
+ * a regular file identified by file descriptor, fd. 
+ * You should return the actual number of bytes written, 
+ * or -1 if there is an error. 
+ * An error occurs 
+ *      (1) if the value of fd refers either to a non-existent file or a directory file. 
+ * If developing DISCOS, you may only have threads within a single shared address space, 
+ * in which case you should identify a buffer region from which your data is written.
+*/
+
+int rd_write(int fd, int pid, char *data, int num_bytes) {
+
+    // find the fd_table
+    file_object* f_obj = NULL;
+    
+    file_descriptor_table* f_objs = get_fd_table(pid);
+    if ( f_objs == NULL ) {
+        printk("rd_write: File descriptor table is NULL.\n");
+        return -1;  
+    }
+    
+    int i;
+    for ( i = 0; i < FD_TABLE_SIZE; i++ ) {
+        if ( f_objs->file_objects[i].pos == fd ) {
+            f_obj = &f_objs->file_objects[i];
+            break;
+        }
+    }
+    
+    if ( f_obj == NULL ) {
+        printk("rd_write: Cannot find this file object.\n");
+        return -1;
+    }
+    
+    inode_struct* inode = f_obj->inode_ptr;
+    if ( inode == NULL ) {
+        printk("rd_write: inode is null.\n");
+        return -1;
+    }
+    if ( strcmp(inode->type, "dir\0") == 0 ) {
+        printk("rd_write: Cannot write a directory!");
+        return -1;
+    }
+    
+    // access right check
+    // WR RD WR
+    if ( f_obj->status == RD ) {
+        printk("rd_write: Access denied! f_obj->status is %d\n", f_obj->status);
+        return -1;
+    }
+    printk("Therere!\n");
+    // begin to write
+    int written_bytes = 0;
+    unsigned int cursor = f_obj->cursor;
+    int seg = 0;
+    int offset = 0;
+    // get the last position
+    seg = cursor / BLOCK_SIZE;
+    offset = cursor % BLOCK_SIZE;
+
+    /* write in the direct blocks */
+    // seg will be less than eight if we are in direct blocks
+    for ( i = seg; i < INODE_NUM_DIRECT_PTR; i++ ) {
+
+        if ( inode->pointers[i] == NULL ) {
+            // get a new block if this direct block is empty
+            int free_block_num = get_free_block_num_from_bitmap(discos->bitmap);
+            if ( free_block_num == -1 ) {
+                printk("<1> rd_write: no free block found!\n");
+                return -1;
+            }
+            inode->pointers[i] = allocate_data_block(free_block_num);
+        }
+
+        data_block_struct* direct_block = inode->pointers[i];
+        int j;
+        for ( j = offset; j < BLOCK_SIZE; j++ ) {
+            if ( data[written_bytes] != '\0' ) {
+                direct_block->data[j] = data[written_bytes];
+                written_bytes += 1;
+                f_obj->cursor += 1;
+                if ( written_bytes == num_bytes ) {
+                    // finish 
+                    printk("rd_write: written_byte=%d\n", written_bytes);
+                    return written_bytes;
+                }
+            }
+        }
+    }
+
+    // write in the direct blocks
+    /*for ( i = 0; i < INODE_NUM_DIRECT_PTR; i++ ) {
+        data_block_struct* direct_block = inode->pointers[i];
+        
+        if ( direct_block == NULL ) {
+            // get a new block if this direct block is empty
+
+            continue;
+        }
+        int j;
+        for ( j = 0; j < BLOCK_SIZE; j++ ) {
+            if ( data[written_bytes] != '\0' ) {
+                direct_block->data[j] = data[written_bytes];
+                written_bytes += 1;
+                f_obj->cursor += 1;
+                if ( written_bytes == num_bytes ) {
+                    // finish 
+                    printf("rd_write: written_byte=%d\n", written_bytes);
+                    return written_bytes;
+                }
+            }
+        }
+    }*/
+    printk("Hererere!\n");
+    return 0;   // the actual number of byte written
+
+}
+
+void print_data_block(int index) {
+    printk("Data block %d content: \n", index);
+    data_block_struct* block = &discos->data_blocks[index];
+    int i;
+    for ( i = 0; i < BLOCK_SIZE; i++ ) {
+        printk("%c ", block->data[i]);
+    }
+    printk("\n");
 }

@@ -29,6 +29,8 @@
 #define MAX_FILE_SIZE           1067008 // in bytes      
 #define INODE_NUM_DIRECT_PTR    8
 #define DATA_BLOCKS_NUM         7931   
+#define THERAD_POOL_SIZE        10 
+#define FD_TABLE_SIZE           1024
 
 #define MAGIC_NUM 88
 
@@ -43,6 +45,10 @@
 #define RD_UNLINK  _IOW(MAGIC_NUM, 8, ioctl_args_t*)
 #define RD_READDIR _IOW(MAGIC_NUM, 9, ioctl_args_t*)
 
+#define RD  (S_IRUSR | S_IRGRP | S_IROTH)
+#define RW  (S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH)
+#define WR  (S_IWUSR | S_IRGRP | S_IROTH)
+
 // typedef unsigned short uint16_t;
 // typedef unsigned int uint32_t;
 typedef union DATA_BLOCK data_block_struct;
@@ -53,6 +59,7 @@ typedef struct ioctl_args {
 	int pid;
 	int fd;
 	char* pathname;
+    char* data;
 } ioctl_args_t;
 
 /* Data structure for file system */
@@ -112,16 +119,35 @@ typedef struct FILESYS {
     // 4 blocks
     // 1 byte * 4 * 256 = 1024 bytes -> 1024 * 8 bit
     // 7931 blocks data blocks, 8192 blocks in all
-    char bitmap[BITMAP_SIZE*BLOCK_SIZE]; 
+    unsigned char bitmap[BITMAP_SIZE*BLOCK_SIZE]; 
 
     // 7931 blocks
     data_block_struct data_blocks[DATA_BLOCKS_NUM];
 
 } filesys_struct;
 
-/* file descriptor table*/
 
 /* file object */
+typedef struct FILE_object {
+    inode_struct* inode_ptr;
+    unsigned int status;
+    unsigned int cursor;
+    unsigned int pos;
+    unsigned int usable;
+} file_object;
+
+
+/* file descriptor table*/
+typedef struct FILE_DESCRIPTOR_TABLE {
+    file_object file_objects[1024];
+} file_descriptor_table;
+
+
+/* thread pool */
+typedef struct PROCESS_FD_TABLE {
+    unsigned int pid;
+    file_descriptor_table fd_table;
+} process_fd_table;
 
 
 
@@ -144,11 +170,19 @@ dir_entry_struct* get_next_dir_entry_single(data_block_struct* index_block, int 
 dir_entry_struct* get_next_dir_entry_double(data_block_struct* index_block, int _segment);
 void clear_inode_single_indirect(data_block_struct* single_indirect);
 void clear_inode_double_indirect(data_block_struct* double_indirect);
+file_object* create_file_object(int pid);
+file_descriptor_table* get_fd_table(int pid);
+int clear_entry_in_current_dir(inode_struct* cur_dir_inode, char* filename);
+
+void print_data_block(int index);
 
 /* file operations */
 int rd_mkdir(char* pathname);
 int rd_create(char *pathname, char* type, int mode);
 int rd_unlink(char *pathname);
+int rd_chmod(char *_pathname, unsigned int mode);
+int rd_open(char *_pathname, unsigned int flags, int pid);
+int rd_write(int fd, int pid, char *data, int num_bytes);
 
 void cleanup_fs();
 
