@@ -217,37 +217,37 @@ int main(void) {
     printf ("Press a key to continue\n");
     getchar(); // Wait for keypress
 
-    // #ifdef TEST_SINGLE_INDIRECT
+    #ifdef TEST_SINGLE_INDIRECT
 
-    // /* Try reading from all single-indirect data blocks */
-    // retval = READ (fd, addr, sizeof(data2), 100);
+    /* Try reading from all single-indirect data blocks */
+    retval = READ (fd, addr, sizeof(data2), 100);
   
-    // if (retval < 0) {
-    //     fprintf (stderr, "read: File read STAGE2 error! status: %d\n", retval);
-    //     exit(EXIT_FAILURE);
-    // }
-    // /* Should be all 2s here... */
-    // printf ("Data at addr: %s\n", addr);
-    // printf ("Press a key to continue\n");
-    // getchar(); // Wait for keypress
+    if (retval < 0) {
+        fprintf (stderr, "read: File read STAGE2 error! status: %d\n", retval);
+        exit(EXIT_FAILURE);
+    }
+    /* Should be all 2s here... */
+    printf ("Data at addr: %s\n", addr);
+    printf ("Press a key to continue\n");
+    getchar(); // Wait for keypress
 
-    // #ifdef TEST_DOUBLE_INDIRECT
+    #ifdef TEST_DOUBLE_INDIRECT
 
-    // /* Try reading from all double-indirect data blocks */
-    // retval = READ (fd, addr, sizeof(data3), 100);
+    /* Try reading from all double-indirect data blocks */
+    retval = READ (fd, addr, sizeof(data3), 100);
   
-    // if (retval < 0) {
-    //     fprintf (stderr, "read: File read STAGE3 error! status: %d\n", retval);
-    //     exit(EXIT_FAILURE);
-    // }
-    // /* Should be all 3s here... */
-    // printf ("Data at addr: %s\n", addr);
-    // printf ("Press a key to continue\n");
-    // getchar(); // Wait for keypress
+    if (retval < 0) {
+        fprintf (stderr, "read: File read STAGE3 error! status: %d\n", retval);
+        exit(EXIT_FAILURE);
+    }
+    /* Should be all 3s here... */
+    printf ("Data at addr: %s\n", addr);
+    printf ("Press a key to continue\n");
+    getchar(); // Wait for keypress
 
-    // #endif // TEST_DOUBLE_INDIRECT
+    #endif // TEST_DOUBLE_INDIRECT
 
-    // #endif // TEST_SINGLE_INDIRECT
+    #endif // TEST_SINGLE_INDIRECT
 
     /* Close the bigfile */
     retval = CLOSE(fd, 100);
@@ -1854,8 +1854,11 @@ int rd_read(int _fd, char *_addr, int num_bytes, int pid) {
     }
 
     // a temp buffer to store the 
-    char* read_buffer = malloc(sizeof(bytes_to_read));
-    memset(read_buffer, 0, sizeof(bytes_to_read));
+    // char* read_buffer = malloc(sizeof(bytes_to_read));
+    // memset(read_buffer, 0, sizeof(bytes_to_read));
+    char read_buffer[bytes_to_read+1];
+    memset(read_buffer, 0, sizeof(bytes_to_read) + 1);
+
     int seg = f_obj->cursor / BLOCK_SIZE;
     int offset = f_obj->cursor % BLOCK_SIZE;
 
@@ -1920,9 +1923,11 @@ int rd_read(int _fd, char *_addr, int num_bytes, int pid) {
 
     /* read in double indirect */
     
-    seg = inode->size / BLOCK_SIZE;
-    offset = inode->size % BLOCK_SIZE;
+    seg = f_obj->cursor / BLOCK_SIZE;
+    offset = f_obj->cursor % BLOCK_SIZE;
+    printf("<> rd_read: before Double seg: %d, offset: %d\n", seg, offset);
     if ( bytes_read < bytes_to_read && seg >= (8 + 64) && seg < (8 + 64 + 64*64) ) {
+        printf("<> rd_read: Reading double indirect!\n");
         data_block_struct* double_indirect = inode->double_indirect_ptrs;
 
         if ( double_indirect != NULL ) {
@@ -1969,12 +1974,12 @@ int rd_read(int _fd, char *_addr, int num_bytes, int pid) {
     /* TODO: copy the read_buffer to the target address */
     /* In user space, we can directly copy */
     /* In kernel space, we can only copy page by page */
+    read_buffer[bytes_to_read] = '\0';
+    strcpy(_addr, read_buffer);     // test for user space
 
-    // strcpy(_addr, read_buffer);     // test for user space
-
-    for ( i = 0; i < bytes_read; i++ ) {
+    /*for ( i = 0; i < bytes_read; i++ ) {
         _addr[i] = read_buffer[i];
-    }
+    }*/
 
     printf("<><><><> Implement kernel space copy here <><><><>\n");
 
@@ -1982,7 +1987,7 @@ int rd_read(int _fd, char *_addr, int num_bytes, int pid) {
     printf("<>rd_read: final return: %d \n", bytes_read);
 
     // 这里不知道为什么 free 就报错
-    free(read_buffer);
+    // free(read_buffer);
     
     
     return bytes_read;   // return the number of bytes actually read
