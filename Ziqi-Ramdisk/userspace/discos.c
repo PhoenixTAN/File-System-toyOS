@@ -1796,7 +1796,7 @@ int rd_lseek(int _fd, int offset, int pid) {
  * If developing DISCOS, you may only have threads within a single shared address space, 
  * in which case you should identify a buffer region into which your data is read.
 */
-int rd_read(int fd, char *data, int num_bytes, int pid) {
+int rd_read(int _fd, char *data, int num_bytes, int pid) {
     
     /* preprocess: find this file object first */
 
@@ -1843,11 +1843,15 @@ int rd_read(int fd, char *data, int num_bytes, int pid) {
 
     // TODO: read
 
-    
+
 
     return 0;   // return the number of bytes actually read
 
 }
 
 
+/***/
+/*int rd_close(int _fd, int pid) {
+
+}*/
 
