@@ -4,7 +4,7 @@
 /* Macro from test file */
 #define TEST1
 #define TEST2
-//#define TEST3
+#define TEST3
 #define TEST4
 #define TEST5
 // #define TEST6
@@ -217,37 +217,37 @@ int main(void) {
     printf ("Press a key to continue\n");
     getchar(); // Wait for keypress
 
-    #ifdef TEST_SINGLE_INDIRECT
+    // #ifdef TEST_SINGLE_INDIRECT
 
-    /* Try reading from all single-indirect data blocks */
-    retval = READ (fd, addr, sizeof(data2), 100);
+    // /* Try reading from all single-indirect data blocks */
+    // retval = READ (fd, addr, sizeof(data2), 100);
   
-    if (retval < 0) {
-        fprintf (stderr, "read: File read STAGE2 error! status: %d\n", retval);
-        exit(EXIT_FAILURE);
-    }
-    /* Should be all 2s here... */
-    printf ("Data at addr: %s\n", addr);
-    printf ("Press a key to continue\n");
-    getchar(); // Wait for keypress
+    // if (retval < 0) {
+    //     fprintf (stderr, "read: File read STAGE2 error! status: %d\n", retval);
+    //     exit(EXIT_FAILURE);
+    // }
+    // /* Should be all 2s here... */
+    // printf ("Data at addr: %s\n", addr);
+    // printf ("Press a key to continue\n");
+    // getchar(); // Wait for keypress
 
-    #ifdef TEST_DOUBLE_INDIRECT
+    // #ifdef TEST_DOUBLE_INDIRECT
 
-    /* Try reading from all double-indirect data blocks */
-    retval = READ (fd, addr, sizeof(data3), 100);
+    // /* Try reading from all double-indirect data blocks */
+    // retval = READ (fd, addr, sizeof(data3), 100);
   
-    if (retval < 0) {
-        fprintf (stderr, "read: File read STAGE3 error! status: %d\n", retval);
-        exit(EXIT_FAILURE);
-    }
-    /* Should be all 3s here... */
-    printf ("Data at addr: %s\n", addr);
-    printf ("Press a key to continue\n");
-    getchar(); // Wait for keypress
+    // if (retval < 0) {
+    //     fprintf (stderr, "read: File read STAGE3 error! status: %d\n", retval);
+    //     exit(EXIT_FAILURE);
+    // }
+    // /* Should be all 3s here... */
+    // printf ("Data at addr: %s\n", addr);
+    // printf ("Press a key to continue\n");
+    // getchar(); // Wait for keypress
 
-    #endif // TEST_DOUBLE_INDIRECT
+    // #endif // TEST_DOUBLE_INDIRECT
 
-    #endif // TEST_SINGLE_INDIRECT
+    // #endif // TEST_SINGLE_INDIRECT
 
     /* Close the bigfile */
     retval = CLOSE(fd, 100);
@@ -1563,6 +1563,7 @@ int rd_write(int fd, int pid, char *data, int num_bytes) {
     seg = cursor / BLOCK_SIZE;
     offset = cursor % BLOCK_SIZE;
 
+    // 这个一定是连续块吗 不一定 
     /* write in the direct blocks */
     // seg will be less than eight if we are in direct blocks
     for ( i = seg; i < INODE_NUM_DIRECT_PTR; i++ ) {
@@ -1796,8 +1797,10 @@ int rd_lseek(int _fd, int offset, int pid) {
  * If developing DISCOS, you may only have threads within a single shared address space, 
  * in which case you should identify a buffer region into which your data is read.
 */
-int rd_read(int _fd, char *data, int num_bytes, int pid) {
+int rd_read(int _fd, char *_addr, int num_bytes, int pid) {
     
+    printf("<> rd_read: num_bytes=%d\n", num_bytes);
+
     /* preprocess: find this file object first */
 
     // find the fd_table
@@ -1843,9 +1846,8 @@ int rd_read(int _fd, char *data, int num_bytes, int pid) {
 
     // TODO: read
     int bytes_read = 0;
-    unsigned int cursor = f_obj->cursor;
     int bytes_to_read = num_bytes;
-    if ( num_bytes > inode->size - cursor ) {
+    if ( num_bytes > inode->size - f_obj->cursor ) {
         printf("rd_read: num_bytes bigger than file size!\n");
         bytes_to_read = inode->size;
         return -1;
@@ -1853,23 +1855,137 @@ int rd_read(int _fd, char *data, int num_bytes, int pid) {
 
     // a temp buffer to store the 
     char* read_buffer = malloc(sizeof(bytes_to_read));
-
-    int seg = cursor / BLOCK_SIZE;
-    int offset = cursor % BLOCK_SIZE;
+    memset(read_buffer, 0, sizeof(bytes_to_read));
+    int seg = f_obj->cursor / BLOCK_SIZE;
+    int offset = f_obj->cursor % BLOCK_SIZE;
 
     /* read in the direct blocks */
     for ( i = seg; i < INODE_NUM_DIRECT_PTR; i++ ) {
-
+        data_block_struct* direct_block = inode->pointers[i];
+        if ( direct_block != NULL ) {
+            int j;
+            for ( j = offset; j < BLOCK_SIZE; j++ ) {
+                if ( direct_block->data[j] != '\0' ) {
+                    read_buffer[bytes_read] = direct_block->data[j];
+                    bytes_read += 1;
+                    f_obj->cursor += 1;
+                    if ( bytes_read == bytes_to_read ) {
+                        // finish read
+                        printf("rd_read: read bytes %d\n", bytes_read);
+                        break;
+                    }
+                }
+            }
+        }
+        if ( bytes_read == bytes_to_read ) {
+            break;
+        }
     }
 
     /* read in single indirect */
-
+    
+    seg = f_obj->cursor / BLOCK_SIZE;
+    offset = f_obj->cursor % BLOCK_SIZE;
+    if ( bytes_read < bytes_to_read && seg >= 8 && seg < (8+64) ) {
+        data_block_struct* single_indirect = inode->single_indirect_ptrs;       
+        seg = seg - 8;
+        if ( single_indirect != NULL ) {
+            // iterate single indirect index
+            for ( i = seg; i < BLOCK_SIZE/4; i++ ) {
+                data_block_struct* block = single_indirect->index_block[i];
+                if ( block != NULL ) {
+                    // iterate the data block
+                    int j;
+                    for ( j = offset; j < BLOCK_SIZE; j++ ) {
+                        if ( block->data[j] != '\0' ) {
+                            read_buffer[bytes_read] = block->data[j];
+                            bytes_read += 1;
+                            f_obj->cursor += 1;
+                            if ( bytes_read == bytes_to_read ) {
+                                // finish read
+                                printf("rd_read: read bytes %d\n", bytes_read);
+                                break;
+                            }
+                        }
+                    }
+                }
+                if ( bytes_read == bytes_to_read ) {
+                    break;
+                }
+            }
+            
+        }
+    }
+    
 
     /* read in double indirect */
+    
+    seg = inode->size / BLOCK_SIZE;
+    offset = inode->size % BLOCK_SIZE;
+    if ( bytes_read < bytes_to_read && seg >= (8 + 64) && seg < (8 + 64 + 64*64) ) {
+        data_block_struct* double_indirect = inode->double_indirect_ptrs;
+
+        if ( double_indirect != NULL ) {
+            seg = seg - 8 - 64;
+            // iterate the single indirect index blocks
+            for ( i = 0; i < BLOCK_SIZE/4; i++ ) {
+                data_block_struct* single_indirect = double_indirect->index_block[i];
+                if ( single_indirect != NULL ) {
+                    seg = seg/64;
+                    int j;
+                    for ( j = seg; j < BLOCK_SIZE/4; j++ ) {
+                        data_block_struct* block = single_indirect->index_block[j];
+                        if ( block != NULL ) {
+                            // begin to read
+                            int k;
+                            for ( k = offset; k < BLOCK_SIZE; k++ ) {
+                                if ( block->data[k] != '\0' ) {
+                                    read_buffer[bytes_read] = block->data[k];
+                                    bytes_read += 1;
+                                    f_obj->cursor += 1;
+                                    if ( bytes_read == bytes_to_read ) {
+                                        // finish read
+                                        printf("rd_read: read bytes %d\n", bytes_read);
+                                        break;
+                                    }
+                                }
+                            }
+                        }
+                        if ( bytes_read == bytes_to_read ) {
+                            break;
+                        }
+                    }
+
+                }
+                if ( bytes_read == bytes_to_read ) {
+                    break;
+                }
+            }
+        }
+
+    }
+    
+
+    /* TODO: copy the read_buffer to the target address */
+    /* In user space, we can directly copy */
+    /* In kernel space, we can only copy page by page */
+
+    // strcpy(_addr, read_buffer);     // test for user space
+
+    for ( i = 0; i < bytes_read; i++ ) {
+        _addr[i] = read_buffer[i];
+    }
+
+    printf("<><><><> Implement kernel space copy here <><><><>\n");
 
 
+    printf("<>rd_read: final return: %d \n", bytes_read);
+
+    // 这里不知道为什么 free 就报错
     free(read_buffer);
-    return 0;   // return the number of bytes actually read
+    
+    
+    return bytes_read;   // return the number of bytes actually read
 
 }
 
@@ -1929,7 +2045,11 @@ int rd_close(int _fd, int pid) {
     // release the file object
     if ( f_obj->usable == 1 ) {
         f_obj->inode_ptr = NULL;
-        memset(f_obj, 0, sizeof(file_object));
+        // memset(f_obj, 0, sizeof(file_object));
+        f_obj->usable = 0;
+        f_obj->cursor = 0;
+        f_obj->pos = 0;
+        f_obj->status = 0;
         printf("rd_close: release object.\n");
         return 0;
     }
