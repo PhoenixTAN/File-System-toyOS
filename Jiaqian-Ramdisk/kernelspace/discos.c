@@ -1280,9 +1280,72 @@ int write(int fd, int pid, char *data, int num_bytes) {
         }
     }
 
-    // write in double indirect blocks
+    seg = inode->size / BLOCK_SIZE;
+    offset = inode->size % BLOCK_SIZE;
+    // write in double indirect block
     if ( seg >= (8 + 64) && seg < (8 + 64 + 64*64) ) {
-        
+
+        data_block_struct* double_indirect = inode->double_indirect_ptrs;
+        if ( double_indirect == NULL ) {
+            printk("<1> rd_write: we need a new double_indirect pointer.\n");
+            int free_block_num = get_free_block_num_from_bitmap(discos->bitmap);
+            if ( free_block_num == -1 ) {
+                printk("<1> rd_write: no free block found!\n");
+                return -1;
+            }
+            inode->double_indirect_ptrs = allocate_data_block(free_block_num);
+            double_indirect = inode->double_indirect_ptrs;
+        }
+
+        seg = seg - 8 - 64;
+
+        // iterate the single indirect index blocks
+        for ( i = 0; i < BLOCK_SIZE/4; i++ ) {
+            data_block_struct* single_indirect = double_indirect->index_block[i];
+            if ( single_indirect == NULL ) {
+                printk("<1> rd_write: we need a new single_indirect poitner after double_indirect.\n");
+                int free_block_num = get_free_block_num_from_bitmap(discos->bitmap);
+                if ( free_block_num == -1 ) {
+                    printk("<1> rd_write: no free block found!\n");
+                    return -1;
+                }
+                inode->double_indirect_ptrs->index_block[i] = allocate_data_block(free_block_num);
+                single_indirect = inode->double_indirect_ptrs->index_block[i];
+            }
+            
+            seg = seg/64;
+            int j;
+            for ( j = seg; j < BLOCK_SIZE/4; j++ ) {
+                data_block_struct* block = single_indirect->index_block[j];
+                if ( block == NULL ) {
+                    int free_block_num = get_free_block_num_from_bitmap(discos->bitmap);
+                    if ( free_block_num == -1 ) {
+                        printk("<1> rd_write: no free block found!\n");
+                        return -1;
+                    }
+                    single_indirect->index_block[j] = allocate_data_block(free_block_num);
+                    block = single_indirect->index_block[j];
+                }
+
+                // begin to write
+                int k;
+                for ( k = offset; k < BLOCK_SIZE; k++ ) {
+                    if ( data[written_bytes] != '\0' ) {
+                        block->data[k] = data[written_bytes];
+                        written_bytes += 1;
+                        f_obj->cursor += 1;
+                        inode->size += 1;
+                        if ( written_bytes == num_bytes ) {
+                            printk("rd_write: written_byte=%d\n", written_bytes);
+                            return written_bytes;
+                        }
+                    }
+                }
+
+            }
+
+        }
+
     }
 
     if ( seg >= (8 + 64 + 64*64) ) {

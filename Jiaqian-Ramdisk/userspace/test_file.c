@@ -196,14 +196,14 @@ int main () {
 #ifdef TEST_DOUBLE_INDIRECT
 
   /* Try writing to all double-indirect data blocks */
-  // retval = WRITE (fd, data3, sizeof(data3));
+  retval = WRITE (fd, data3, sizeof(data3));
   
-  // if (retval < 0) {
-  //   fprintf (stderr, "write: File write STAGE3 error! status: %d\n",
-	//      retval);
+  if (retval < 0) {
+    fprintf (stderr, "write: File write STAGE3 error! status: %d\n",
+	     retval);
 
-  //   exit(EXIT_FAILURE);
-  // }
+    exit(EXIT_FAILURE);
+  }
 
 #endif // TEST_DOUBLE_INDIRECT
 
