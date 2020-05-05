@@ -10,7 +10,7 @@ cd
 
 /* Macro from test file */
 #define TEST1
-// #define TEST2
+#define TEST2
 // #define TEST3
 // #define TEST4
 #define TEST5
@@ -38,10 +38,13 @@ cd
 #define READWRITE  O_RDWR
 #define WRITEONLY  O_WRONLY
 
+static char data1[INODE_NUM_DIRECT_PTR*BLOCK_SIZE]; /* Largest data directly accessible */
+
 /* global variables */
 filesys_struct* discos;
 
 process_fd_table p_fd_table[THERAD_POOL_SIZE];
+
 
 int main(void) {
 
@@ -55,18 +58,6 @@ int main(void) {
 	printf("   inode %d\n", sizeof(inode_struct));
 	printf("   filesys %d\n", sizeof(filesys_struct));
 
-    
-	// custom test
-    /*
-    int ret;
-    ret = rd_mkdir("/");    // output root exits
-    ret = rd_mkdir("/folder1"); 
-    ret = rd_mkdir("/folder1/floder2");
-    ret = rd_mkdir("/folder1/floder3");
-    ret = rd_mkdir("/folder1/floder3/floder4");
-    ret = rd_create("/folder1/floder2/Hellooooooooo", "reg\0", 1);
-    print_bitmap(discos->bitmap);
-	*/
 
     // initialize file system
 	init_file_sys();
@@ -77,6 +68,10 @@ int main(void) {
     int retval, i;
     int fd;
     int index_node_number;
+
+    /* Some arbitrary data for our files */
+    memset (data1, '1', sizeof (data1));
+
     #ifdef TEST1
 
     /* ****TEST 1: MAXIMUM file creation**** */
@@ -154,13 +149,76 @@ int main(void) {
     printf("<1> TEST 5 pass!\n\n");
     #endif // TEST5
 
+    
+    #ifdef TEST2
+    /* ****TEST 2: LARGEST file size**** */
+    /* Generate one LARGEST file */
+    retval = CREAT (PATH_PREFIX "/bigfile", "reg\0", RW);
+
+    if ( retval < 0 ) {
+        fprintf (stderr, "creat: File creation error! status: %d\n", retval);
+        exit(EXIT_FAILURE);
+    }
+
+    retval =  OPEN (PATH_PREFIX "/bigfile", RW, 100);   /* Open file to write to it */
+    
+    if (retval < 0) {
+        fprintf (stderr, "open: File open error! status: %d\n", retval);
+        exit(EXIT_FAILURE);
+    }
+
+    fd = retval;			/* Assign valid fd */
+
+    /* Try writing to all direct data blocks */
+    retval = WRITE (fd, 100, data1, sizeof(data1));
+    
+    if (retval < 0) {
+        fprintf (stderr, "write: File write STAGE1 error! status: %d\n", retval);
+        exit(EXIT_FAILURE);
+    }
+    printf("<2> Test 2 writes something to direct blocks.\n");
+
+    for ( i = 0; i < 10; i++ ) {
+        print_data_block(i);
+    }
+
+    #ifdef TEST_SINGLE_INDIRECT
+    
+    /* Try writing to all single-indirect data blocks */
+    retval = WRITE (fd, data2, sizeof(data2));
+    
+    if (retval < 0) {
+        fprintf (stderr, "write: File write STAGE2 error! status: %d\n",
+            retval);
+
+        exit(EXIT_FAILURE);
+    }
+
+    #ifdef TEST_DOUBLE_INDIRECT
+
+    /* Try writing to all double-indirect data blocks */
+    retval = WRITE (fd, data3, sizeof(data3));
+    
+    if (retval < 0) {
+        fprintf (stderr, "write: File write STAGE3 error! status: %d\n",
+            retval);
+
+        exit(EXIT_FAILURE);
+    }
+
+    #endif // TEST_DOUBLE_INDIRECT
+
+    #endif // TEST_SINGLE_INDIRECT
+
+    #endif // TEST2
+
     // print root dir inode info
     /*for ( i = 0; i < 5; i++ ) {
         print_inode_info(i);
-    }
+    }*/
 
     // test for chmod
-    printf("RD %u   ", RD);
+    /*printf("RD %u   ", RD);
     printf("RW %u   ", RW);
     printf("WR %u   ", WR);
     printf("\n");
@@ -168,20 +226,32 @@ int main(void) {
 
     for ( i = 0; i < 5; i++ ) {
         print_inode_info(i);
-    }
-
-    /* rd_open test 
+    }*/
+    // rd_unlink("/dir1/dir2");
+    /* rd_open test */
+    /*
     retval = rd_open("/dir1", RD, 100);
     printf("file_cursor: %d\n", retval);
 
     rd_chmod("/dir1", RW);
     retval = rd_open("/dir1", RD, 100);
-    printf("file_cursor: %d\n", retval);
-    */
+    printf("file_cursor: %d\n", retval);*/
+    
 	/* free ramdisk */
 	free(discos);
-
+    // free(p_fd_table);
 	return 0;
+}
+
+
+void print_data_block(int index) {
+    printf("Data block %d content: \n", index);
+    data_block_struct* block = &discos->data_blocks[index];
+    int i;
+    for ( i = 0; i < BLOCK_SIZE; i++ ) {
+        printf("%c ", block->data[i]);
+    }
+    printf("\n");
 }
 
 
@@ -306,6 +376,8 @@ int init_file_sys() {
 	int retval;
 	discos = (filesys_struct*)malloc(sizeof(filesys_struct));
     memset(discos, 0, sizeof(sizeof(filesys_struct)));
+    // p_fd_table = malloc(sizeof(process_fd_table)*THERAD_POOL_SIZE);
+    memset(p_fd_table, 0, sizeof(process_fd_table)*THERAD_POOL_SIZE);
 	if ( !discos ) {
 		printf("discos malloc fail.\n");
 		return -1;
@@ -327,7 +399,7 @@ int rd_mkdir(char* pathname) {
 	char* pwd;
 	char* filename;
 	int len = strlen(pathname);
-    printf("rd_mkdir strlen(pathname): %d\n", len);
+    // printf("rd_mkdir strlen(pathname): %d\n", len);
 	pwd = malloc(len);
 	filename = malloc(len);
 	if(strcmp(pathname, "/") == 0 && discos->superblock.free_inodes == MAX_NUM_FILE) {
@@ -1076,6 +1148,7 @@ int clear_entry_in_current_dir(inode_struct* cur_dir_inode, char* filename) {
         }
     }
 
+    // TODO
     // find entry in double indirect
     data_block_struct* double_indirect = cur_dir_inode->double_indirect_ptrs;
     if ( double_indirect != NULL ) {
@@ -1132,6 +1205,7 @@ int rd_unlink(char* _pathname) {
 
 	// error occurs if the pathname does not exist
 	int file_inode_num = find_inode_number(pathname);
+    printf("<1> rd_unlink the file_inode_num: %d\n", file_inode_num);
 	if ( file_inode_num == -1 ) {
 		printf("<1> rd_unlink Error occurs: the pathname does not exist.\n");
 		return -1;
@@ -1248,13 +1322,18 @@ int rd_open(char *_pathname, unsigned int flags, int pid) {
 
 	// error occurs if the pathname does not exist
 	int file_inode_num = find_inode_number(pathname);
+    printf("<1> rd_open the file_inode_num: %d\n", file_inode_num);
 	if ( file_inode_num == -1 ) {
 		printf("<1> rd_open Error occurs: the pathname does not exist.\n");
 		return -1;
 	}
-
+    
     inode_struct* file_inode = &discos->inodes[file_inode_num];
-
+    if ( file_inode == NULL ) {
+        printf("<1> rd_open: file_inode == NULL\n");
+        return -1;
+    }
+    
     // check the access right
     if ( flags == RD && file_inode->access == WR ) {
         printf("<1> rd_open Error occurs: No access right. flags=%d, access=%d\n", flags, file_inode->access);
@@ -1268,7 +1347,7 @@ int rd_open(char *_pathname, unsigned int flags, int pid) {
         printf("<1> rd_open Error occurs: No access right. flags=%d, access=%d\n", flags, file_inode->access);
         return -1;
     }
-
+    
     file_object* f_obj = create_file_object(pid);
 
     if ( f_obj == NULL ) {
@@ -1278,8 +1357,9 @@ int rd_open(char *_pathname, unsigned int flags, int pid) {
 
     f_obj->cursor = 0;
     f_obj->inode_ptr = file_inode;
+    f_obj->status = flags;
 
-    return f_obj->cursor;
+    return f_obj->pos;  // file descriptor value
 }
 
 
@@ -1288,12 +1368,15 @@ file_object* create_file_object(int pid) {
     file_descriptor_table* f_objs = get_fd_table(pid);
 
     if ( f_objs == NULL ) {
+        printf("File descriptor table is NULL.\n");
         return NULL;
     }
 
     int i;
-    for ( i = 0; i < 1024; i++ ) {
-        if ( f_objs->file_objects[i].inode_ptr == NULL ) {
+    for ( i = 0; i < FD_TABLE_SIZE; i++ ) {
+        if ( f_objs->file_objects[i].usable == 0 ) {
+            f_objs->file_objects[i].pos = i;
+            f_objs->file_objects[i].usable = 1;
             return &f_objs->file_objects[i];
         }
     }
@@ -1321,3 +1404,125 @@ file_descriptor_table* get_fd_table(int pid) {
 
     return NULL;
 }
+
+/**
+ * write up to num_bytes from the specified address in the calling process to 
+ * a regular file identified by file descriptor, fd. 
+ * You should return the actual number of bytes written, 
+ * or -1 if there is an error. 
+ * An error occurs 
+ *      (1) if the value of fd refers either to a non-existent file or a directory file. 
+ * If developing DISCOS, you may only have threads within a single shared address space, 
+ * in which case you should identify a buffer region from which your data is written.
+*/
+
+int rd_write(int fd, int pid, char *data, int num_bytes) {
+
+    // find the fd_table
+    file_object* f_obj = NULL;
+    
+    file_descriptor_table* f_objs = get_fd_table(pid);
+    if ( f_objs == NULL ) {
+        printf("rd_write: File descriptor table is NULL.\n");
+        return -1;  
+    }
+    
+    int i;
+    for ( i = 0; i < FD_TABLE_SIZE; i++ ) {
+        if ( f_objs->file_objects[i].pos == fd ) {
+            f_obj = &f_objs->file_objects[i];
+            break;
+        }
+    }
+    
+    if ( f_obj == NULL ) {
+        printf("rd_write: Cannot find this file object.\n");
+        return -1;
+    }
+    
+    inode_struct* inode = f_obj->inode_ptr;
+    if ( inode == NULL ) {
+        printf("rd_write: inode is null.\n");
+        return -1;
+    }
+    if ( strcmp(inode->type, "dir\0") == 0 ) {
+        printf("rd_write: Cannot write a directory!");
+        return -1;
+    }
+    
+    // access right check
+    // WR RD WR
+    if ( f_obj->status == RD ) {
+        printf("rd_write: Access denied! f_obj->status is %d\n", f_obj->status);
+        return -1;
+    }
+    printf("Therere!\n");
+    // begin to write
+    int written_bytes = 0;
+    unsigned int cursor = f_obj->cursor;
+    int seg = 0;
+    int offset = 0;
+    // get the last position
+    seg = cursor / BLOCK_SIZE;
+    offset = cursor % BLOCK_SIZE;
+
+    /* write in the direct blocks */
+    // seg will be less than eight if we are in direct blocks
+    for ( i = seg; i < INODE_NUM_DIRECT_PTR; i++ ) {
+
+        if ( inode->pointers[i] == NULL ) {
+            // get a new block if this direct block is empty
+            int free_block_num = get_free_block_num_from_bitmap(discos->bitmap);
+            if ( free_block_num == -1 ) {
+                printf("<1> rd_write: no free block found!\n");
+                return -1;
+            }
+            inode->pointers[i] = allocate_data_block(free_block_num);
+        }
+
+        data_block_struct* direct_block = inode->pointers[i];
+        int j;
+        for ( j = offset; j < BLOCK_SIZE; j++ ) {
+            if ( data[written_bytes] != '\0' ) {
+                direct_block->data[j] = data[written_bytes];
+                written_bytes += 1;
+                f_obj->cursor += 1;
+                if ( written_bytes == num_bytes ) {
+                    // finish 
+                    printf("rd_write: written_byte=%d\n", written_bytes);
+                    return written_bytes;
+                }
+            }
+        }
+    }
+
+    // write in the direct blocks
+    /*for ( i = 0; i < INODE_NUM_DIRECT_PTR; i++ ) {
+        data_block_struct* direct_block = inode->pointers[i];
+        
+        if ( direct_block == NULL ) {
+            // get a new block if this direct block is empty
+
+            continue;
+        }
+        int j;
+        for ( j = 0; j < BLOCK_SIZE; j++ ) {
+            if ( data[written_bytes] != '\0' ) {
+                direct_block->data[j] = data[written_bytes];
+                written_bytes += 1;
+                f_obj->cursor += 1;
+                if ( written_bytes == num_bytes ) {
+                    // finish 
+                    printf("rd_write: written_byte=%d\n", written_bytes);
+                    return written_bytes;
+                }
+            }
+        }
+    }*/
+    printf("Hererere!\n");
+    return 0;   // the actual number of byte written
+
+}
+
+
+

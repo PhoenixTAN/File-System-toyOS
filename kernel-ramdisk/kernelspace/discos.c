@@ -1,172 +1,7 @@
 #include "discos.h"
 
-// #include <stdlib.h>
-// #include <unistd.h>
-// #include <fcntl.h>
-// #include <sys/stat.h>
-// #include <dirent.h>
-
-/*
-pwd
-ls
-cd 
-cd 
-*/
-
-/* Macro from test file */
-// #define TEST1
-// #define TEST2
-// #define TEST3
-// #define TEST4
-// #define TEST5
-// #define TEST6
-
-// #define PATH_PREFIX ""
-
-// #define CREAT   rd_create
-// #define OPEN    rd_open
-// #define WRITE   rd_write
-// #define READ    rd_read
-// #define UNLINK  rd_unlink
-// #define MKDIR   rd_mkdir
-// #define CLOSE   rd_close
-// #define LSEEK   rd_lseek
-// #define CHMOD   rd_chmod
-
-// File modes
-// #define RD  (S_IRUSR | S_IRGRP | S_IROTH)
-// #define RW  (S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH)
-// #define WR  (S_IWUSR | S_IRGRP | S_IROTH)
-
 /* global variables */
 filesys_struct* discos;
-
-
-// int main(void) {
-
-// 	printk("\n\nDiscos ##########\n");
-
-// 	// Data structure size check
-//     printk("Data structure size check:\n");
-// 	printk("   superblock %d\n", sizeof(superblock_struct));
-// 	printk("   dir entry %d\n", sizeof(dir_entry_struct));
-// 	printk("   data block %d\n", sizeof(data_block_struct));
-// 	printk("   inode %d\n", sizeof(inode_struct));
-// 	printk("   filesys %d\n", sizeof(filesys_struct));
-    
-// 	// custom test
-//     /*
-//     int ret;
-//     ret = rd_mkdir("/");    // output root exits
-//     ret = rd_mkdir("/folder1"); 
-//     ret = rd_mkdir("/folder1/floder2");
-//     ret = rd_mkdir("/folder1/floder3");
-//     ret = rd_mkdir("/folder1/floder3/floder4");
-//     ret = rd_create("/folder1/floder2/Hellooooooooo", "reg\0", 1);
-//     print_bitmap(discos->bitmap);
-// 	*/
-
-//     // initialize file system
-// 	init_file_sys();
-
-// 	/* test_file.c */
-//     char pathname[80];
-
-//     int retval, i;
-//     int fd;
-//     int index_node_number;
-//     #ifdef TEST1
-
-//     /* ****TEST 1: MAXIMUM file creation**** */
-
-//     /* Generate MAXIMUM regular files */
-//     /*for ( i = 0; i < MAX_NUM_FILE - 1; i++ ) { 
-//         sprintk (pathname, PATH_PREFIX "/file%d", i);
-    
-//         retval = CREAT (pathname, "reg\0", RD);
-    
-//         if (retval < 0) {
-//             fprintk (stderr, "creat: File creation error! status: %d (%s)\n", retval, pathname);
-//             perror("Error!");
-      
-//             if (i != MAX_NUM_FILE - 1)
-// 	            exit(EXIT_FAILURE);
-//         }
-    
-//         memset (pathname, 0, 80);
-//     }   */
-//     for ( i = 0; i < 1024 - 1; i++ ) { 
-//         sprintk (pathname, PATH_PREFIX "/file%d", i);
-    
-//         retval = CREAT (pathname, "reg\0", RD);
-    
-//         if (retval < 0) {
-//             fprintk (stderr, "creat: File creation error! status: %d (%s)\n", retval, pathname);
-//             perror("Error!");
-      
-//             if (i != 1024 - 1)
-// 	            exit(EXIT_FAILURE);
-//         }
-    
-//         memset (pathname, 0, 80);
-//     }   
-//     printk("<1> Test 1 created 1023 files succeeded!\n\n");
-//     print_bitmap(discos->bitmap);
-//     for ( i = 0; i < 65; i++ ) {
-//         print_block_info(i);
-//     }
-//     /* Delete all the files created */
-//     for (i = 0; i < 1024 - 1; i++) { 
-        
-//         sprintk (pathname, PATH_PREFIX "/file%d", i);
-
-//         retval = UNLINK (pathname);
-    
-//         if (retval < 0) {
-//             fprintk (stderr, "unlink: File deletion error! status: %d\n", retval);
-      
-//             exit(EXIT_FAILURE);
-//         }
-    
-//         memset (pathname, 0, 80);
-//     }
-//     printk("<1> Test 1 pass!\n\n");
-//     #endif // TEST1
-
-//     #ifdef TEST5
-  
-//     /* ****TEST 5: Make directory including entries **** */
-//     retval = MKDIR (PATH_PREFIX "/dir1");
-    
-//     if (retval < 0) {
-//         fprintk (stderr, "mkdir: Directory 1 creation error! status: %d\n", retval);
-//         exit(EXIT_FAILURE);
-//     }
-
-//     retval = MKDIR (PATH_PREFIX "/dir1/dir2");
-    
-//     if (retval < 0) {
-//         fprintk (stderr, "mkdir: Directory 2 creation error! status: %d\n", retval);
-
-//         exit(EXIT_FAILURE);
-//     }
-
-//     retval = MKDIR (PATH_PREFIX "/dir1/dir3");
-    
-//     if (retval < 0) {
-//         fprintk (stderr, "mkdir: Directory 3 creation error! status: %d\n", retval);
-
-//         exit(EXIT_FAILURE);
-//     }
-//     printk("<1> TEST 5 pass!\n\n");
-//     #endif // TEST5
-
-
-// 	/* free ramdisk */
-// 	free(discos);
-
-// 	return 0;
-// }
 
 void print_block_info(int index) {
     printk("Block %d info: \n", index);
@@ -177,24 +12,6 @@ void print_block_info(int index) {
     }
 }
 
-// void cmd_daemon() {
-// 	char cmd[CMD_MAX_LENGTH] = "Hello Discos!\n";
-
-// 	printk("%s", cmd);
-
-// 	while ( 1 ) {
-// 		printk("Discos# ");
-
-// 		fgets(cmd, CMD_MAX_LENGTH, stdin);	// char* _Buffer, int   _MaxCount, FILE* _Stream
-// 		cmd[strlen(cmd)-1] = '\0';
-
-// 		if ( !strcmp(cmd, "exit") ) {
-// 			printk("Exit!!!\n");
-// 			break;
-// 		}
-
-// 	}
-// }
 
 /* get the free block number from bitmap 
     return the number of the free data block.
@@ -285,7 +102,9 @@ int rd_mkdir(char* pathname) {
 	int len = strlen(pathname);
     printk("rd_mkdir strlen(pathname): %d\n", len);
 	pwd = vmalloc(len);
+    memset(pwd, 0, len);
 	filename = vmalloc(len);
+    memset(filename, 0, len);
 	if(strcmp(pathname, "/") == 0 && discos->superblock.free_inodes == MAX_NUM_FILE) {
 		printk("init root dir\n");
 		discos->superblock.free_inodes--;
@@ -338,6 +157,7 @@ int my_find_inode_number(char* pathname) {
 
     char* temp_pathname, *found;
  	temp_pathname = vmalloc(strlen(pathname));
+    memset(temp_pathname, 0, strlen(pathname));
 	strcpy(temp_pathname, pathname);
 	// temp_pathname = vmalloc(strlen(pathname));
 	// strcpy(temp_pathname, pathname);
@@ -613,6 +433,9 @@ int rd_create(char *pathname, char* type, int mode) {
     // get the file/directory name you want to create
     char *current_path = vmalloc(strlen(pathname));
     char *entry_name = vmalloc(strlen(pathname));
+    memset(current_path, 0, strlen(pathname));
+    memset(entry_name, 0, strlen(pathname));
+
     parse_absolute_path(pathname, current_path, entry_name);
     printk("parse: current path: %s    entry_name: %s\n", current_path, entry_name);
 
@@ -981,6 +804,7 @@ dir_entry_struct* find_entry_in_current_dir(inode_struct* cur_dir_inode, char* f
 int rd_unlink(char* _pathname) {
 	// deep copy the path name
 	char* pathname = vmalloc(strlen(_pathname));
+    memset(pathname, 0, strlen(_pathname));
     strcpy(pathname, _pathname);
     printk("Unlinking %s ...\n", pathname);
 	// error occurs if you attempt to unlink the root directory file.
@@ -1012,6 +836,8 @@ int rd_unlink(char* _pathname) {
 
 	char* current_dir = vmalloc(strlen(pathname));
 	char* filename = vmalloc(strlen(pathname));
+    memset(current_dir, 0, strlen(pathname));
+    memset(filename, 0, strlen(pathname));
 	parse_absolute_path(pathname, current_dir, filename);
 
 	int current_dir_inode_num = my_find_inode_number(current_dir);
@@ -1035,11 +861,11 @@ int rd_unlink(char* _pathname) {
 	memset(file_inode, 0 , sizeof(inode_struct));
 	discos->superblock.free_inodes++;
 
+    printk("Unlink %s success! \n", pathname);
 
+    vfree(pathname);
 	vfree(current_dir);
 	vfree(filename);
-
-    printk("Unlink %s success! \n", pathname);
 
 	return 0;
 
@@ -1048,3 +874,4 @@ int rd_unlink(char* _pathname) {
 void cleanup_fs() {
     vfree(discos);
 }
+

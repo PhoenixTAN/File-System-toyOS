@@ -30,3 +30,5 @@ typedef struct ioctl_args {
 
 int rd_init();
 int rd_creat(char* pathname);
+int rd_unlink(char* pathname);
+int rd_mkdir(char* pathname);

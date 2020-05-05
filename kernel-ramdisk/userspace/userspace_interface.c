@@ -1,4 +1,5 @@
 #include "userspace.h"
+
 int fd;
 int ret;
 
@@ -8,6 +9,7 @@ int rd_init() {
 
     fd = open("/proc/discos", O_RDWR);
     ret = ioctl(fd, RD_INIT, args);
+    free(args);
     return ret;
 }
 
@@ -16,6 +18,7 @@ int rd_creat(char* pathname) {
     memset(args, 0, sizeof(ioctl_args_t));
     args->pathname = pathname;
     ret = ioctl(fd, RD_CREATE, args);
+    free(args);
     return ret;
 }
 
@@ -24,6 +27,7 @@ int rd_unlink(char* pathname) {
     memset(args, 0, sizeof(ioctl_args_t));
     args->pathname = pathname;
     ret = ioctl(fd, RD_UNLINK, args);
+    free(args);
     return ret;
 }
 
@@ -32,5 +36,7 @@ int rd_mkdir(char* pathname) {
     memset(args, 0, sizeof(ioctl_args_t));
     args->pathname = pathname;
     ret = ioctl(fd, RD_MKDIR, args);
+    free(args);
     return ret;
 }
+

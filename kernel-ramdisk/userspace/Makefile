@@ -1,4 +1,4 @@
-all: clean compile run
+all: clean compile
 
 run:
 	./test_file

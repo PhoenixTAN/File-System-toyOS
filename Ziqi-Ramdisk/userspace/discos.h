@@ -23,6 +23,7 @@
 #define INODE_NUM_DIRECT_PTR    8
 #define DATA_BLOCKS_NUM         7931   
 #define THERAD_POOL_SIZE        10 
+#define FD_TABLE_SIZE           1024
 
 typedef unsigned short uint16_t;
 typedef unsigned int uint32_t;
@@ -98,6 +99,8 @@ typedef struct FILE_object {
     inode_struct* inode_ptr;
     unsigned int status;
     unsigned int cursor;
+    unsigned int pos;   // position in fd table
+    unsigned int usable;    
 } file_object;
 
 
@@ -142,11 +145,14 @@ int clear_entry_in_current_dir(inode_struct* cur_dir_inode, char* filename);
 file_object* create_file_object(int pid);
 file_descriptor_table* get_fd_table(int pid);
 
+void print_data_block(int index);
+
 /* file operations */
 int rd_mkdir(char* pathname);
 int rd_create(char *pathname, char* type, unsigned int mode);
 int rd_unlink(char *pathname);
 int rd_chmod(char *pathname, unsigned int mode);
 int rd_open(char *pathname, unsigned int flags, int pid);
+int rd_write(int fd, int pid, char *data, int num_bytes);
 
 #endif // !RAMDISK_H

@@ -1,15 +1,3 @@
-/* 
-   -- template test file for RAMDISK Filesystem Assignment.
-   -- include a case for:
-   -- two processes (LINUX) or threads in DISCOS
-   -- largest number of files (should be 1024 max -- 1023 discounting "/")
-   -- largest single file (start with direct blocks [2048 bytes max], 
-   then single-indirect [18432 bytes max] and finally double 
-   indirect [1067008 bytes max])
-   -- creating and unlinking files to avoid memory leaks
-   -- each file operation
-   -- error checking on invalid inputs
-*/
 
 #include "userspace.h"
 
@@ -82,62 +70,59 @@ static char data2[PTRS_PB*BLK_SZ];     /* Single indirect data size */
 static char data3[PTRS_PB*PTRS_PB*BLK_SZ]; /* Double indirect data size */
 static char addr[PTRS_PB*PTRS_PB*BLK_SZ+1]; /* Scratchpad memory */
 
+
 int main () {
     
-  int retval, i;
-  int fd;
-  int index_node_number;
+    int retval, i;
+    int fd;
+    int index_node_number;
 
-  /* Some arbitrary data for our files */
-  memset (data1, '1', sizeof (data1));
-  memset (data2, '2', sizeof (data2));
-  memset (data3, '3', sizeof (data3));
+    /* Some arbitrary data for our files */
+    memset (data1, '1', sizeof (data1));
+    memset (data2, '2', sizeof (data2));
+    memset (data3, '3', sizeof (data3));
 
-  rd_init();
+    rd_init();
 
-#ifdef TEST1
+    #ifdef TEST1
 
-  /* ****TEST 1: MAXIMUM file creation**** */
+    /* ****TEST 1: MAXIMUM file creation**** */
 
-  /* Generate MAXIMUM regular files */
-  for (i = 0; i < MAX_FILES; i++) { 
-    sprintf (pathname, PATH_PREFIX "file%d", i);
+    /* Generate MAXIMUM regular files */
+    for ( i = 0; i < MAX_FILES; i++ ) { 
+        sprintf (pathname, PATH_PREFIX "file%d", i);
     
-    retval = CREAT (pathname);
+        retval = CREAT (pathname);
     
-    if (retval < 0) {
-      fprintf (stderr, "creat: File creation error! status: %d (%s)\n",
-	       retval, pathname);
-      perror("Error!");
+        if (retval < 0) {
+            fprintf (stderr, "creat: File creation error! status: %d (%s)\n", retval, pathname);
+            perror("Error!");
       
-      if (i != MAX_FILES)
-	exit(EXIT_FAILURE);
+            if (i != MAX_FILES)
+	              exit(EXIT_FAILURE);
+		}
+    
+		memset (pathname, 0, 80);
+    }   
+
+    /* Delete all the files created */
+    for (i = 0; i < MAX_FILES; i++) { 
+        sprintf (pathname, PATH_PREFIX "file%d", i);
+    
+        retval = UNLINK (pathname);
+    
+        if (retval < 0) {
+            fprintf (stderr, "unlink: File deletion error! status: %d\n", retval);   
+            exit(EXIT_FAILURE);
+        }  
+        memset (pathname, 0, 80);
     }
-    
-    memset (pathname, 0, 80);
-  }   
 
-  /* Delete all the files created */
-  for (i = 0; i < MAX_FILES; i++) { 
-    sprintf (pathname, PATH_PREFIX "file%d", i);
-    
-    retval = UNLINK (pathname);
-    
-    if (retval < 0) {
-      fprintf (stderr, "unlink: File deletion error! status: %d\n",
-	       retval);
-      
-      exit(EXIT_FAILURE);
+    if(retval == 0) {
+        printf("Success!!!!");
     }
-    
-    memset (pathname, 0, 80);
-  }
 
-  if(retval == 0) {
-    printf("Success!!!!");
-  }
-
-#endif // TEST1
+    #endif // TEST1
   
 #ifdef TEST2
 
@@ -314,37 +299,34 @@ int main () {
 #endif // TEST4
 
   
-#ifdef TEST5
+      #ifdef TEST5
   
-  /* ****TEST 5: Make directory including entries **** */
-  retval = MKDIR (PATH_PREFIX "dir1");
+      /* ****TEST 5: Make directory including entries **** */
+      retval = MKDIR (PATH_PREFIX "dir1");
     
-  if (retval < 0) {
-    fprintf (stderr, "mkdir: Directory 1 creation error! status: %d\n",
-	     retval);
+      if (retval < 0) {
+          fprintf (stderr, "mkdir: Directory 1 creation error! status: %d\n", retval);
 
-    exit(EXIT_FAILURE);
-  }
+          exit(EXIT_FAILURE);
+      }
 
-  retval = MKDIR (PATH_PREFIX "dir1/dir2");
+      retval = MKDIR (PATH_PREFIX "dir1/dir2");
     
-  if (retval < 0) {
-    fprintf (stderr, "mkdir: Directory 2 creation error! status: %d\n",
-	     retval);
+      if (retval < 0) {
+        fprintf (stderr, "mkdir: Directory 2 creation error! status: %d\n", retval);
 
-    exit(EXIT_FAILURE);
-  }
+        exit(EXIT_FAILURE);
+      }
 
-  retval = MKDIR (PATH_PREFIX "dir1/dir3");
+      retval = MKDIR (PATH_PREFIX "dir1/dir3");
     
-  if (retval < 0) {
-    fprintf (stderr, "mkdir: Directory 3 creation error! status: %d\n",
-	     retval);
+      if (retval < 0) {
+          fprintf (stderr, "mkdir: Directory 3 creation error! status: %d\n", retval);
 
-    exit(EXIT_FAILURE);
-  }
+          exit(EXIT_FAILURE);
+      }
 
-#endif // TEST5
+    #endif // TEST5
 
   
 #ifdef TEST6

@@ -1,8 +1,6 @@
 #ifndef RAMDISK_H
 #define RAMDISK_H
 
-// #include <stdio.h>
-// #include <string.h>		// strcmp
 
 #include <linux/module.h>
 #include <linux/init.h>
