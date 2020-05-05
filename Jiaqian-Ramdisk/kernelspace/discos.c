@@ -4,7 +4,7 @@
 /* global variables */
 filesys_struct* discos;
 process_fd_table* p_fd_table;
-
+char read_buffer[64*64*256];
 
 void print_block_info(int index) {
     printk("Block %d info: \n", index);
@@ -875,6 +875,7 @@ int rd_unlink(char* _pathname) {
 void cleanup_fs() {
     vfree(discos);
     vfree(p_fd_table);
+    // vfree(read_buffer);
 }
 
 
@@ -1491,7 +1492,8 @@ int rd_read(int _fd, char *_addr, int num_bytes, int pid) {
     }
 
     // a temp buffer to store the 
-    char* read_buffer = vmalloc(sizeof(bytes_to_read));
+    //char* read_buffer = vmalloc(sizeof(bytes_to_read));
+    // read_buffer = vmalloc(sizeof(bytes_to_read));
     memset(read_buffer, 0, sizeof(bytes_to_read));
     // char read_buffer[bytes_to_read+1];
     // memset(read_buffer, 0, sizeof(bytes_to_read) + 1);
@@ -1528,7 +1530,6 @@ int rd_read(int _fd, char *_addr, int num_bytes, int pid) {
     
     seg = f_obj->cursor / BLOCK_SIZE;
     offset = f_obj->cursor % BLOCK_SIZE;
-    
     if ( bytes_read < bytes_to_read && seg >= 8 && seg < (8+64) ) {
         data_block_struct* single_indirect = inode->single_indirect_ptrs;       
         printk("in single direct: bytes_to_read:%d\n", bytes_to_read);
@@ -1564,54 +1565,54 @@ int rd_read(int _fd, char *_addr, int num_bytes, int pid) {
     }
     
     printk("after single direct: %d\n", bytes_to_read);
-    // /* read in double indirect */
+    /* read in double indirect */
     
-    // seg = f_obj->cursor / BLOCK_SIZE;
-    // offset = f_obj->cursor % BLOCK_SIZE;
-    // printk("<> rd_read: before Double seg: %d, offset: %d\n", seg, offset);
-    // if ( bytes_read < bytes_to_read && seg >= (8 + 64) && seg < (8 + 64 + 64*64) ) {
-    //     printk("<> rd_read: Reading double indirect!\n");
-    //     data_block_struct* double_indirect = inode->double_indirect_ptrs;
+    seg = f_obj->cursor / BLOCK_SIZE;
+    offset = f_obj->cursor % BLOCK_SIZE;
+    printk("<> rd_read: before Double seg: %d, offset: %d\n", seg, offset);
+    if ( bytes_read < bytes_to_read && seg >= (8 + 64) && seg < (8 + 64 + 64*64) ) {
+        printk("<> rd_read: Reading double indirect!\n");
+        data_block_struct* double_indirect = inode->double_indirect_ptrs;
 
-    //     if ( double_indirect != NULL ) {
-    //         seg = seg - 8 - 64;
-    //         // iterate the single indirect index blocks
-    //         for ( i = 0; i < BLOCK_SIZE/4; i++ ) {
-    //             data_block_struct* single_indirect = double_indirect->index_block[i];
-    //             if ( single_indirect != NULL ) {
-    //                 seg = seg/64;
-    //                 int j;
-    //                 for ( j = seg; j < BLOCK_SIZE/4; j++ ) {
-    //                     data_block_struct* block = single_indirect->index_block[j];
-    //                     if ( block != NULL ) {
-    //                         // begin to read
-    //                         int k;
-    //                         for ( k = offset; k < BLOCK_SIZE; k++ ) {
-    //                             if ( block->data[k] != '\0' ) {
-    //                                 read_buffer[bytes_read] = block->data[k];
-    //                                 bytes_read += 1;
-    //                                 f_obj->cursor += 1;
-    //                                 if ( bytes_read == bytes_to_read ) {
-    //                                     // finish read
-    //                                     printk("rd_read: read bytes %d\n", bytes_read);
-    //                                     break;
-    //                                 }
-    //                             }
-    //                         }
-    //                     }
-    //                     if ( bytes_read == bytes_to_read ) {
-    //                         break;
-    //                     }
-    //                 }
+        if ( double_indirect != NULL ) {
+            seg = seg - 8 - 64;
+            // iterate the single indirect index blocks
+            for ( i = 0; i < BLOCK_SIZE/4; i++ ) {
+                data_block_struct* single_indirect = double_indirect->index_block[i];
+                if ( single_indirect != NULL ) {
+                    seg = seg/64;
+                    int j;
+                    for ( j = seg; j < BLOCK_SIZE/4; j++ ) {
+                        data_block_struct* block = single_indirect->index_block[j];
+                        if ( block != NULL ) {
+                            // begin to read
+                            int k;
+                            for ( k = offset; k < BLOCK_SIZE; k++ ) {
+                                if ( block->data[k] != '\0' ) {
+                                    read_buffer[bytes_read] = block->data[k];
+                                    bytes_read += 1;
+                                    f_obj->cursor += 1;
+                                    if ( bytes_read == bytes_to_read ) {
+                                        // finish read
+                                        printk("rd_read: read bytes %d\n", bytes_read);
+                                        break;
+                                    }
+                                }
+                            }
+                        }
+                        if ( bytes_read == bytes_to_read ) {
+                            break;
+                        }
+                    }
 
-    //             }
-    //             if ( bytes_read == bytes_to_read ) {
-    //                 break;
-    //             }
-    //         }
-    //     }
+                }
+                if ( bytes_read == bytes_to_read ) {
+                    break;
+                }
+            }
+        }
 
-    // }
+    }
     
 
     // /* TODO: copy the read_buffer to the target address */
@@ -1624,7 +1625,7 @@ int rd_read(int _fd, char *_addr, int num_bytes, int pid) {
     char* dst = _addr;
     int flag = 1;
     int left = bytes_to_read;
-    printk("rd_read left: %d\n", left);
+    printk("rd_read left: %d", left);
     printk("rd_read bytes_to_read:%d\n", bytes_to_read);
     while(flag) {
         if(left > 4096) {

@@ -1856,6 +1856,7 @@ int rd_read(int _fd, char *_addr, int num_bytes, int pid) {
     // a temp buffer to store the 
     // char* read_buffer = malloc(sizeof(bytes_to_read));
     // memset(read_buffer, 0, sizeof(bytes_to_read));
+    // printf("<> rd_read: malloc read_buffer with size of %d\n", sizeof(bytes_to_read));
     char read_buffer[bytes_to_read+1];
     memset(read_buffer, 0, sizeof(bytes_to_read) + 1);
 
@@ -1988,7 +1989,7 @@ int rd_read(int _fd, char *_addr, int num_bytes, int pid) {
 
     // 这里不知道为什么 free 就报错
     // free(read_buffer);
-    
+    // printf("<> rd_read: free?\n");
     
     return bytes_read;   // return the number of bytes actually read
 

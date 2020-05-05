@@ -117,6 +117,9 @@ int main () {
     memset (pathname, 0, 80);
   }   
 
+  printf("<1> TEST 1 CREATE 1023 FILE!!\n");
+  getchar(); // Wait for keypress
+
   /* Delete all the files created */
   for (i = 0; i < MAX_FILES; i++) { 
     sprintf (pathname, PATH_PREFIX "file%d", i);
@@ -134,8 +137,9 @@ int main () {
   }
 
   if(retval == 0) {
-    printf("Success!!!!");
+    printf("<1> TEST 1 PASS!!\n");
   }
+  getchar(); // Wait for keypress
 
 #endif // TEST1
   
@@ -179,7 +183,8 @@ int main () {
     exit(EXIT_FAILURE);
   }
 
-  printf("Write success!!!");
+  printf("<1> TEST 2 Write to direct blocks PASS!!!");
+  getchar();
 
 #ifdef TEST_SINGLE_INDIRECT
   
@@ -192,6 +197,9 @@ int main () {
 
     exit(EXIT_FAILURE);
   }
+  
+  printf("<1> TEST 2 Write to single indirect blocks PASS!!!");
+  getchar();
 
 #ifdef TEST_DOUBLE_INDIRECT
 
@@ -204,6 +212,9 @@ int main () {
 
     exit(EXIT_FAILURE);
   }
+
+  printf("<1> TEST 2 Write to double indirect blocks PASS!!!");
+  getchar();
 
 #endif // TEST_DOUBLE_INDIRECT
 
@@ -284,7 +295,7 @@ int main () {
 
     exit(EXIT_FAILURE);
   }
-
+  printf("<1> TEST 3 PASS!\n");
 #endif // TEST3
 
 
@@ -318,7 +329,8 @@ int main () {
     
     exit(EXIT_FAILURE);
   }
-
+  printf("<1> TEST 4 PASS!\n");
+  getchar();
 #endif // TEST4
 
   
@@ -351,7 +363,8 @@ int main () {
 
     exit(EXIT_FAILURE);
   }
-
+  printf("<1> TEST 5 PASS!\n");
+  getchar();
 #endif // TEST5
 
   
