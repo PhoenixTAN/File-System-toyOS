@@ -152,5 +152,6 @@ int rd_open(char *pathname, unsigned int flags, int pid);
 int rd_write(int _fd, int pid, char *data, int num_bytes);
 
 int rd_lseek(int _fd, int offset, int pid);
+int rd_read(int fd, char *address, int num_bytes, int pid);
 
 #endif // !RAMDISK_H

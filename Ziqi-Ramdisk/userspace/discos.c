@@ -1785,8 +1785,18 @@ int rd_lseek(int _fd, int offset, int pid) {
     return f_obj->cursor;
 }
 
-/*
-int rd_read(int fd, char *address, int num_bytes) {
+
+/**
+ * read up to num_bytes from a regular file identified by file descriptor, fd, into a process' location at address. 
+ * You should return 
+ *      the number of bytes actually read, 
+ *      else -1 if there is an error. 
+ * An error occurs 
+ *      if the value of fd refers either to a non-existent file or a directory file. 
+ * If developing DISCOS, you may only have threads within a single shared address space, 
+ * in which case you should identify a buffer region into which your data is read.
+*/
+int rd_read(int fd, char *address, int num_bytes, int pid) {
 
 }
-*/
+
