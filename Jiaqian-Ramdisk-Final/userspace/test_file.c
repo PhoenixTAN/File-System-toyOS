@@ -69,7 +69,7 @@
 #define TEST_DOUBLE_INDIRECT
 
 
-#define MAX_FILES 4
+#define MAX_FILES 1023
 #define BLK_SZ 256		/* Block size */
 #define DIRECT 8		/* Direct pointers in location attribute */
 #define PTR_SZ 4		/* 32-bit [relative] addressing */
