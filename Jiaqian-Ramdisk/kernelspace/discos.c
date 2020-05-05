@@ -1148,7 +1148,7 @@ int clear_entry_in_current_dir(inode_struct* cur_dir_inode, char* filename) {
  * in which case you should identify a buffer region from which your data is written.
 */
 
-int write(int fd, int pid, char *data, int num_bytes) {
+int rd_write(int fd, int pid, char *data, int num_bytes) {
 
     // find the fd_table
     file_object* f_obj = NULL;
@@ -1356,6 +1356,373 @@ int write(int fd, int pid, char *data, int num_bytes) {
     printk("Hererere!\n");
     return 0;   // the actual number of byte written
 
+}
+
+/**
+ * set the file object's file position identified by file descriptor, fd, to offset, 
+ * returning 
+ *      the new position, 
+ *      or the end of the file position if the offset is beyond the file's current size. 
+ *      -1 to indicate an error, if applied to directory files, 
+ *      else 0 to indicate success.
+*/
+int rd_lseek(int _fd, int offset, int pid) {
+
+    // find the fd_table
+    file_object* f_obj = NULL;
+    
+    file_descriptor_table* f_objs = get_fd_table(pid);
+    if ( f_objs == NULL ) {
+        printk("rd_lseek: File descriptor table is NULL.\n");
+        return -1;  
+    }
+    
+    int i;
+    for ( i = 0; i < FD_TABLE_SIZE; i++ ) {
+        if ( f_objs->file_objects[i].pos == _fd ) {
+            f_obj = &f_objs->file_objects[i];
+            break;
+        }
+    }
+    
+    if ( f_obj == NULL ) {
+        printk("rd_lseek: Cannot find this file object.\n");
+        return -1;
+    }
+    
+    inode_struct* inode = f_obj->inode_ptr;
+    if ( inode == NULL ) {
+        printk("rd_lseek: inode is null.\n");
+        return -1;
+    }
+
+    if ( f_obj->usable != 1 ) {
+        printk("rd_lseek: Cnnot find file object. usable != 1 \n");
+        return -1;
+    }
+
+    if ( strcmp(inode->type, "dir\0") == 0 ) {
+        printk("rd_lseek: Cannot lseek a directory!");
+        return -1;
+    }
+
+    if ( offset < 0 ) {
+        printk("rd_lseek: offset < 0 \n");
+        return -1;
+    }
+
+    unsigned int file_size = inode->size; 
+    if ( offset >= file_size ) {
+        // return end of file
+        printk("rd_lseek: return end of file.\n");
+        f_obj->cursor = file_size - 1;
+        return file_size - 1;
+    }
+
+    f_obj->cursor = offset;
+    printk("rd_lseek: change position to %d\n", f_obj->cursor);
+    return f_obj->cursor;
+}
+
+/**
+ * read up to num_bytes from a regular file identified by file descriptor, fd, into a process' location at address. 
+ * You should return 
+ *      the number of bytes actually read, 
+ *      else -1 if there is an error. 
+ * An error occurs 
+ *      if the value of fd refers either to a non-existent file or a directory file. 
+ * If developing DISCOS, you may only have threads within a single shared address space, 
+ * in which case you should identify a buffer region into which your data is read.
+*/
+int rd_read(int _fd, char *_addr, int num_bytes, int pid) {
+    
+    printk("<> rd_read: num_bytes=%d\n", num_bytes);
+
+    /* preprocess: find this file object first */
+
+    // find the fd_table
+    file_object* f_obj = NULL;
+    
+    file_descriptor_table* f_objs = get_fd_table(pid);
+    if ( f_objs == NULL ) {
+        printk("rd_read: File descriptor table is NULL.\n");
+        return -1;  
+    }
+    
+    int i;
+    for ( i = 0; i < FD_TABLE_SIZE; i++ ) {
+        if ( f_objs->file_objects[i].pos == _fd ) {
+            f_obj = &f_objs->file_objects[i];
+            break;
+        }
+    }
+    
+    if ( f_obj == NULL ) {
+        printk("rd_read: Cannot find this file object.\n");
+        return -1;
+    }
+    
+    inode_struct* inode = f_obj->inode_ptr;
+    if ( inode == NULL ) {
+        printk("rd_read: inode is null.\n");
+        return -1;
+    }
+
+    if ( f_obj->usable != 1 ) {
+        printk("rd_read: Cnnot find file object. usable != 1 \n");
+        return -1;
+    }
+
+    if ( strcmp(inode->type, "dir\0") == 0 ) {
+        printk("rd_read: Cannot read a directory!");
+        return -1;
+    }
+
+
+    /* preprocess finish */
+
+    // TODO: read
+    int bytes_read = 0;
+    int bytes_to_read = num_bytes;
+    if ( num_bytes > inode->size - f_obj->cursor ) {
+        printk("rd_read: num_bytes bigger than file size!\n");
+        bytes_to_read = inode->size;
+        return -1;
+    }
+
+    // a temp buffer to store the 
+    char* read_buffer = vmalloc(sizeof(bytes_to_read));
+    memset(read_buffer, 0, sizeof(bytes_to_read));
+    // char read_buffer[bytes_to_read+1];
+    // memset(read_buffer, 0, sizeof(bytes_to_read) + 1);
+
+    int seg = f_obj->cursor / BLOCK_SIZE;
+    int offset = f_obj->cursor % BLOCK_SIZE;
+
+    /* read in the direct blocks */
+    for ( i = seg; i < INODE_NUM_DIRECT_PTR; i++ ) {
+        data_block_struct* direct_block = inode->pointers[i];
+        if ( direct_block != NULL ) {
+            int j;
+            for ( j = offset; j < BLOCK_SIZE; j++ ) {
+                if ( direct_block->data[j] != '\0' ) {
+                    read_buffer[bytes_read] = direct_block->data[j];
+                    bytes_read += 1;
+                    f_obj->cursor += 1;
+                    if ( bytes_read == bytes_to_read ) {
+                        // finish read
+                        printk("rd_read: read bytes in direct %d\n", bytes_read);
+                        break;
+                    }
+                }
+            }
+        }
+        if ( bytes_read == bytes_to_read ) {
+            break;
+        }
+    }
+
+    printk("after direct: bytes_to_read:%d\n", bytes_to_read);
+
+    // /* read in single indirect */
+    
+    seg = f_obj->cursor / BLOCK_SIZE;
+    offset = f_obj->cursor % BLOCK_SIZE;
+    
+    if ( bytes_read < bytes_to_read && seg >= 8 && seg < (8+64) ) {
+        data_block_struct* single_indirect = inode->single_indirect_ptrs;       
+        printk("in single direct: bytes_to_read:%d\n", bytes_to_read);
+        seg = seg - 8;
+        if ( single_indirect != NULL ) {
+            // iterate single indirect index
+            printk("single_indirect != NULL\n");
+            for ( i = seg; i < BLOCK_SIZE/4; i++ ) {
+                data_block_struct* block = single_indirect->index_block[i];
+                if ( block != NULL ) {
+                    // iterate the data block
+                    printk("single_indirect block != NULL\n");
+                    int j;
+                    for ( j = offset; j < BLOCK_SIZE; j++ ) {
+                        if ( block->data[j] != '\0' ) {
+                            read_buffer[bytes_read] = block->data[j];
+                            bytes_read += 1;
+                            f_obj->cursor += 1;
+                            if ( bytes_read == bytes_to_read ) {
+                                // finish read
+                                printk("rd_read: read bytes in single direct%d\n", bytes_read);
+                                break;
+                            }
+                        }
+                    }
+                }
+                if ( bytes_read == bytes_to_read ) {
+                    break;
+                }
+            }
+            
+        }
+    }
+    
+    printk("after single direct: %d\n", bytes_to_read);
+    // /* read in double indirect */
+    
+    // seg = f_obj->cursor / BLOCK_SIZE;
+    // offset = f_obj->cursor % BLOCK_SIZE;
+    // printk("<> rd_read: before Double seg: %d, offset: %d\n", seg, offset);
+    // if ( bytes_read < bytes_to_read && seg >= (8 + 64) && seg < (8 + 64 + 64*64) ) {
+    //     printk("<> rd_read: Reading double indirect!\n");
+    //     data_block_struct* double_indirect = inode->double_indirect_ptrs;
+
+    //     if ( double_indirect != NULL ) {
+    //         seg = seg - 8 - 64;
+    //         // iterate the single indirect index blocks
+    //         for ( i = 0; i < BLOCK_SIZE/4; i++ ) {
+    //             data_block_struct* single_indirect = double_indirect->index_block[i];
+    //             if ( single_indirect != NULL ) {
+    //                 seg = seg/64;
+    //                 int j;
+    //                 for ( j = seg; j < BLOCK_SIZE/4; j++ ) {
+    //                     data_block_struct* block = single_indirect->index_block[j];
+    //                     if ( block != NULL ) {
+    //                         // begin to read
+    //                         int k;
+    //                         for ( k = offset; k < BLOCK_SIZE; k++ ) {
+    //                             if ( block->data[k] != '\0' ) {
+    //                                 read_buffer[bytes_read] = block->data[k];
+    //                                 bytes_read += 1;
+    //                                 f_obj->cursor += 1;
+    //                                 if ( bytes_read == bytes_to_read ) {
+    //                                     // finish read
+    //                                     printk("rd_read: read bytes %d\n", bytes_read);
+    //                                     break;
+    //                                 }
+    //                             }
+    //                         }
+    //                     }
+    //                     if ( bytes_read == bytes_to_read ) {
+    //                         break;
+    //                     }
+    //                 }
+
+    //             }
+    //             if ( bytes_read == bytes_to_read ) {
+    //                 break;
+    //             }
+    //         }
+    //     }
+
+    // }
+    
+
+    // /* TODO: copy the read_buffer to the target address */
+    // /* In user space, we can directly copy */
+    // /* In kernel space, we can only copy page by page */
+    // read_buffer[bytes_to_read] = '\0';
+    // // strcpy(_addr, read_buffer);     // test for user space
+
+    char* src = read_buffer;
+    char* dst = _addr;
+    int flag = 1;
+    int left = bytes_to_read;
+    printk("rd_read left: %d\n", left);
+    printk("rd_read bytes_to_read:%d\n", bytes_to_read);
+    while(flag) {
+        if(left > 4096) {
+            copy_to_user(dst, src, 4096);
+            left -= 4096;
+            src += 4096;
+            dst += 4096;
+            printk("Read: %d left\n", left);
+        }
+        else {
+            copy_to_user(dst, src, left);
+            printk("Read: %d left (<4096)\n", left);
+            flag = 0;
+        }
+    }
+
+    // /*for ( i = 0; i < bytes_read; i++ ) {
+    //     _addr[i] = read_buffer[i];
+    // }*/
+
+    printk("<><><><> Implement kernel space copy here <><><><>\n");
+
+
+    printk("<>rd_read: final return: %d \n", bytes_read);
+
+    // vfree(read_buffer);
+    
+    return bytes_read;   // return the number of bytes actually read
+
+}
+
+
+/**
+ * close the corresponding file descriptor 
+ * and release the file object matching the value returned from a previous rd_open(). 
+ * Return 0 on success and -1 on error. 
+ * An error occurs if fd refers to a non-existent file.
+*/
+int rd_close(int _fd, int pid) {
+
+    /* preprocess: find this file object first */
+
+    // find the fd_table
+    file_object* f_obj = NULL;
+    
+    file_descriptor_table* f_objs = get_fd_table(pid);
+    if ( f_objs == NULL ) {
+        printk("rd_close: File descriptor table is NULL.\n");
+        return -1;  
+    }
+    
+    int i;
+    for ( i = 0; i < FD_TABLE_SIZE; i++ ) {
+        if ( f_objs->file_objects[i].pos == _fd ) {
+            f_obj = &f_objs->file_objects[i];
+            break;
+        }
+    }
+    
+    if ( f_obj == NULL ) {
+        printk("rd_close: Cannot find this file object.\n");
+        return -1;
+    }
+    
+    inode_struct* inode = f_obj->inode_ptr;
+    if ( inode == NULL ) {
+        printk("rd_close: inode is null.\n");
+        return -1;
+    }
+
+    if ( f_obj->usable != 1 ) {
+        printk("rd_close: Cnnot find file object. usable != 1 \n");
+        return -1;
+    }
+
+    if ( strcmp(inode->type, "dir\0") == 0 ) {
+        printk("rd_close: Cannot close a directory!");
+        return -1;
+    }
+
+
+    /* preprocess finish */
+
+
+    // release the file object
+    if ( f_obj->usable == 1 ) {
+        f_obj->inode_ptr = NULL;
+        // memset(f_obj, 0, sizeof(file_object));
+        f_obj->usable = 0;
+        f_obj->cursor = 0;
+        f_obj->pos = 0;
+        f_obj->status = 0;
+        printk("rd_close: release object.\n");
+        return 0;
+    }
+
+    printk("<1> rd_close: ERROR!\n");
+    return -1;
 }
 
 

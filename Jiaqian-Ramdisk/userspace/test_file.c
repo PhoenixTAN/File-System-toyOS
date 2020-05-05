@@ -19,7 +19,7 @@
 #define USE_RAMDISK
 #define TEST1
 #define TEST2
-// #define TEST3
+#define TEST3
 #define TEST4
 #define TEST5
 // #define TEST6
@@ -223,6 +223,8 @@ int main () {
     exit(EXIT_FAILURE);
   }
 
+  printf("LSEEK: retval: %d\n", retval);
+
   /* Try reading from all direct data blocks */
   retval = READ (fd, addr, sizeof(data1));
   
@@ -255,7 +257,7 @@ int main () {
 
 #ifdef TEST_DOUBLE_INDIRECT
 
-  /* Try reading from all double-indirect data blocks */
+//   /* Try reading from all double-indirect data blocks */
   retval = READ (fd, addr, sizeof(data3));
   
   if (retval < 0) {
@@ -273,7 +275,7 @@ int main () {
 
 #endif // TEST_SINGLE_INDIRECT
 
-  /* Close the bigfile */
+//   /* Close the bigfile */
   retval = CLOSE(fd);
   
   if (retval < 0) {

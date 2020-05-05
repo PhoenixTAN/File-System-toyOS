@@ -180,7 +180,10 @@ int rd_create(char *pathname, char* type, int mode);
 int rd_unlink(char *pathname);
 int rd_chmod(char *_pathname, unsigned int mode, int pid);
 int rd_open(char *_pathname, unsigned int flags, int pid);
-int write(int fd, int pid, char *data, int num_bytes);
+int rd_write(int fd, int pid, char *data, int num_bytes);
+int rd_lseek(int _fd, int offset, int pid);
+int rd_close(int _fd, int pid);
+int rd_read(int _fd, char *_addr, int num_bytes, int pid);
 
 void cleanup_fs();
 

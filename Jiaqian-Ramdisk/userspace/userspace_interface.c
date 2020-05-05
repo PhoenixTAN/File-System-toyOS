@@ -1,6 +1,5 @@
 #include "userspace.h"
 static int fd;
-int ret;
 
 int rd_init() {
     int ret;
@@ -58,6 +57,7 @@ int rd_open(char* pathname, unsigned int mode) {
 }
 
 int rd_write(int _fd, char* data, int number_of_data) {
+    int ret;
     ioctl_args_t* args = malloc(sizeof(ioctl_args_t));
     memset(args, 0, sizeof(ioctl_args_t));
     args->pid = (int)getpid();
@@ -65,7 +65,6 @@ int rd_write(int _fd, char* data, int number_of_data) {
     args->size = number_of_data;
     args->data = data;
     printf("userspace write\n");
-    ret = 0;
     ret = ioctl(fd, RD_WRITE, args);
     printf("userspace ret: %d\n", ret);
     free(args);
@@ -73,6 +72,7 @@ int rd_write(int _fd, char* data, int number_of_data) {
 }
 
 int rd_chmod(char* pathname, unsigned int mode) {
+    int ret;
     ioctl_args_t* args = malloc(sizeof(ioctl_args_t));
     memset(args, 0, sizeof(ioctl_args_t));
     args->mode = mode;
@@ -82,3 +82,41 @@ int rd_chmod(char* pathname, unsigned int mode) {
     free(args);
     return ret;
 }
+
+int rd_lseek(int _fd, int offset) {
+    int ret;
+    ioctl_args_t* args = malloc(sizeof(ioctl_args_t));
+    memset(args, 0, sizeof(ioctl_args_t));
+    args->fd = _fd;
+    args->size = offset;
+    args->pid = (int)getpid();
+    ret = ioctl(fd, RD_LSEEK, args);
+    free(args);
+    return ret;
+}
+
+int rd_read(int _fd, char* addr, int number_of_data) {
+    int ret;
+    ioctl_args_t* args = malloc(sizeof(ioctl_args_t));
+    memset(args, 0, sizeof(ioctl_args_t));
+    args->fd = _fd;
+    args->data = addr;
+    args->size = number_of_data;
+    args->pid = (int)getpid();
+    ret = ioctl(fd, RD_READ, args);
+    free(args);
+    return ret;
+}
+
+int rd_close(int _fd) {
+    int ret;
+    ioctl_args_t* args = malloc(sizeof(ioctl_args_t));
+    memset(args, 0, sizeof(ioctl_args_t));
+    args->fd = _fd;
+    args->pid = (int)getpid();
+    ret = ioctl(fd, RD_CLOSE, args);
+    free(args);
+    return ret;
+}
+
+

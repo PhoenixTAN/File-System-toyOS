@@ -36,11 +36,9 @@ static int discos_ioctl(struct inode *inode, struct file *file, unsigned int cmd
 	/*printk("Got user path %s\n", args->pathname);*/
 	
 	switch (cmd) {
-		case RD_INIT:
-			// init_fd_table();		
+		case RD_INIT:	
 			ret = init_file_sys();
-			// vfree(args);
-			/*spin_unlock(&my_lock);*/
+			vfree(args);
 			return ret;
 		case RD_OPEN:
 			printk("<1> Opening %s\n", args->pathname);
@@ -50,17 +48,15 @@ static int discos_ioctl(struct inode *inode, struct file *file, unsigned int cmd
 			/*spin_unlock(&my_lock);*/
 			printk("<1> Correctly open!\n");
 			return ret;
-		// case RD_CLOSE:
-		// 	printk("<1> Switch case close\n");
-		// 	ret = close(args->pid, args->fd_num);
-		// 	vfree(args);
-		// 	/*spin_unlock(&my_lock);*/
-		// 	return ret;
-		// case RD_READ:
-		// 	ret = read(args->fd_num, args->address, args->num_bytes, args->pid);
-		// 	vfree(args);
-		// 	/*spin_unlock(&my_lock);*/
-		// 	return ret;
+		case RD_CLOSE:
+			printk("<1> Switch case close\n");
+			ret = rd_close(args->fd, args->pid);
+			vfree(args);
+			return ret;
+		case RD_READ:
+			ret = rd_read(args->fd, args->data, args->size, args->pid);
+			vfree(args);
+			return ret;
 		case RD_WRITE:
 			printk("<1> Begin rd write\n");
 			data = vmalloc(args->size);
@@ -82,10 +78,8 @@ static int discos_ioctl(struct inode *inode, struct file *file, unsigned int cmd
 				}
 			}
 			printk("<1> Here!\n");
-			// copy_from_user(data, args->address, args->num_bytes);
-			// printk("<1> Got write data from user: %s\n",data);
-			// ret = write(args->fd_num, data - args->num_bytes, args->num_bytes, args->pid);
-			ret = write(args->fd, args->pid, data - args->size, args->size);
+			//data - args->size: data current at the tail of data, put it to the head
+			ret = rd_write(args->fd, args->pid, data - args->size, args->size);
 			vfree(data);
 			vfree(args);
 			/*spin_unlock(&my_lock);*/
@@ -101,11 +95,10 @@ static int discos_ioctl(struct inode *inode, struct file *file, unsigned int cmd
 			// spin_unlock(&my_lock);
 			return ret;
 			break;
-		// case RD_LSEEK:
-		// 	ret = lseek(args->pid, args->fd_num, args->offset);
-		// 	vfree(args);
-		// 	/*spin_unlock(&my_lock);*/
-		// 	return ret;
+		case RD_LSEEK:
+			ret = rd_lseek(args->fd, args->size, args->pid);
+			vfree(args);
+			return ret;
 		case RD_MKDIR:
 			printk("<1> Mkdir %s\n", pathname);
 			ret = rd_mkdir(pathname);

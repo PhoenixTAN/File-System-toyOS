@@ -39,3 +39,6 @@ int rd_open(char* pathname, unsigned int mode);
 int rd_mkdir(char* pathname);
 int rd_write(int _fd, char* data, int number_of_data);
 int rd_chmod(char* pathname, unsigned int mode);
+int rd_lseek(int _fd, int offset);
+int rd_read(int _fd, char* addr, int number_of_data);
+int rd_close(int _fd);
