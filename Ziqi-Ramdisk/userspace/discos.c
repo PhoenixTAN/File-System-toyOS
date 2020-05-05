@@ -4,8 +4,8 @@
 /* Macro from test file */
 #define TEST1
 #define TEST2
-// #define TEST3
-// #define TEST4
+//#define TEST3
+#define TEST4
 #define TEST5
 // #define TEST6
 
@@ -33,9 +33,16 @@
 
 #define TEST_SINGLE_INDIRECT
 #define TEST_DOUBLE_INDIRECT
-static char data1[INODE_NUM_DIRECT_PTR*BLOCK_SIZE]; /* Largest data directly accessible */
-static char data2[BLOCK_SIZE/4*BLOCK_SIZE];     /* Single indirect data size */
-static char data3[BLOCK_SIZE/4*BLOCK_SIZE/4*BLOCK_SIZE]; /* Double indirect data size */
+
+
+#define BLK_SZ 256		/* Block size */
+#define DIRECT 8		/* Direct pointers in location attribute */
+#define PTR_SZ 4		/* 32-bit [relative] addressing */
+#define PTRS_PB  (BLK_SZ / PTR_SZ) /* Pointers per index block */
+static char data1[DIRECT*BLK_SZ]; /* Largest data directly accessible */
+static char data2[PTRS_PB*BLK_SZ];     /* Single indirect data size */
+static char data3[PTRS_PB*PTRS_PB*BLK_SZ]; /* Double indirect data size */
+static char addr[PTRS_PB*PTRS_PB*BLK_SZ+1]; /* Scratchpad memory */
 
 /* global variables */
 filesys_struct* discos;
@@ -120,35 +127,7 @@ int main(void) {
     print_inode_info(0);
     print_inode_info(1);
 
-    #ifdef TEST5
-  
-    /* ****TEST 5: Make directory including entries **** */
-    retval = MKDIR (PATH_PREFIX "/dir1");
-    
-    if (retval < 0) {
-        fprintf (stderr, "mkdir: Directory 1 creation error! status: %d\n", retval);
-        exit(EXIT_FAILURE);
-    }
 
-    retval = MKDIR (PATH_PREFIX "/dir1/dir2");
-    
-    if (retval < 0) {
-        fprintf (stderr, "mkdir: Directory 2 creation error! status: %d\n", retval);
-
-        exit(EXIT_FAILURE);
-    }
-
-    retval = MKDIR (PATH_PREFIX "/dir1/dir3");
-    
-    if (retval < 0) {
-        fprintf (stderr, "mkdir: Directory 3 creation error! status: %d\n", retval);
-
-        exit(EXIT_FAILURE);
-    }
-    printf("<1> TEST 5 pass!\n\n");
-    #endif // TEST5
-
-    
     #ifdef TEST2
     /* ****TEST 2: LARGEST file size**** */
     /* Generate one LARGEST file */
@@ -161,7 +140,7 @@ int main(void) {
 
     retval =  OPEN (PATH_PREFIX "/bigfile", RW, 100);   /* Open file to write to it */
     
-    if (retval < 0) {
+    if ( retval < 0 ) {
         fprintf (stderr, "open: File open error! status: %d\n", retval);
         exit(EXIT_FAILURE);
     }
@@ -194,7 +173,7 @@ int main(void) {
     }
     printf("<1> TEST SINGLE INDIRECT DATA Success!!\n");
     print_inode_info(4);
-    #endif // TEST_SINGLE_INDIRECT
+    
 
     #ifdef TEST_DOUBLE_INDIRECT
 
@@ -209,7 +188,76 @@ int main(void) {
     print_inode_info(4);
     #endif // TEST_DOUBLE_INDIRECT
 
+    #endif // TEST_SINGLE_INDIRECT
+    printf("<1> TEST 2 FINISH!!!\n");
     #endif // TEST2
+
+
+
+    #ifdef TEST3
+
+    /* ****TEST 3: Seek and Read file test**** */
+    retval = LSEEK (fd, 0);	/* Go back to the beginning of your file */
+
+    if (retval < 0) {
+        fprintf (stderr, "lseek: File seek error! status: %d\n", retval);
+        exit(EXIT_FAILURE);
+    }
+
+    /* Try reading from all direct data blocks */
+    retval = READ (fd, addr, sizeof(data1));
+  
+    if (retval < 0) {
+        fprintf (stderr, "read: File read STAGE1 error! status: %d\n", retval);
+        exit(EXIT_FAILURE);
+    }
+
+    /* Should be all 1s here... */
+    printf ("Data at addr: %s\n", addr);
+    printf ("Press a key to continue\n");
+    getchar(); // Wait for keypress
+
+    #ifdef TEST_SINGLE_INDIRECT
+
+    /* Try reading from all single-indirect data blocks */
+    retval = READ (fd, addr, sizeof(data2));
+  
+    if (retval < 0) {
+        fprintf (stderr, "read: File read STAGE2 error! status: %d\n", retval);
+        exit(EXIT_FAILURE);
+    }
+    /* Should be all 2s here... */
+    printf ("Data at addr: %s\n", addr);
+    printf ("Press a key to continue\n");
+    getchar(); // Wait for keypress
+
+    #ifdef TEST_DOUBLE_INDIRECT
+
+    /* Try reading from all double-indirect data blocks */
+    retval = READ (fd, addr, sizeof(data3));
+  
+    if (retval < 0) {
+        fprintf (stderr, "read: File read STAGE3 error! status: %d\n", retval);
+        exit(EXIT_FAILURE);
+    }
+    /* Should be all 3s here... */
+    printf ("Data at addr: %s\n", addr);
+    printf ("Press a key to continue\n");
+    getchar(); // Wait for keypress
+
+    #endif // TEST_DOUBLE_INDIRECT
+
+    #endif // TEST_SINGLE_INDIRECT
+
+    /* Close the bigfile */
+    retval = CLOSE(fd);
+  
+    if (retval < 0) {
+        fprintf (stderr, "close: File close error! status: %d\n", retval);
+        exit(EXIT_FAILURE);
+    }
+
+    #endif // TEST3
 
     #ifdef TEST4
 
@@ -218,7 +266,6 @@ int main(void) {
   
     if (retval < 0) {
         fprintf (stderr, "chmod: Failed to change mode! status: %d\n", retval);
-
         exit(EXIT_FAILURE);
     }
 
@@ -240,6 +287,35 @@ int main(void) {
     }
 
     #endif // TEST4
+    print_bitmap(discos->bitmap);
+
+
+    #ifdef TEST5
+  
+    /* ****TEST 5: Make directory including entries **** */
+    retval = MKDIR (PATH_PREFIX "/dir1");
+    
+    if ( retval < 0 ) {
+        fprintf (stderr, "mkdir: Directory 1 creation error! status: %d\n", retval);
+        exit(EXIT_FAILURE);
+    }
+
+    retval = MKDIR (PATH_PREFIX "/dir1/dir2");
+    
+    if ( retval < 0 ) {
+        fprintf (stderr, "mkdir: Directory 2 creation error! status: %d\n", retval);
+        exit(EXIT_FAILURE);
+    }
+
+    retval = MKDIR (PATH_PREFIX "/dir1/dir3");
+    
+    if ( retval < 0 ) {
+        fprintf (stderr, "mkdir: Directory 3 creation error! status: %d\n", retval);
+        exit(EXIT_FAILURE);
+    }
+    printf("<1> TEST 5 pass!\n\n");
+    
+    #endif // TEST5
 
     
 	/* free ramdisk */
@@ -1568,7 +1644,6 @@ int rd_write(int fd, int pid, char *data, int num_bytes) {
         }
     }
 
-
     seg = inode->size / BLOCK_SIZE;
     offset = inode->size % BLOCK_SIZE;
     // write in double indirect block
@@ -1630,11 +1705,8 @@ int rd_write(int fd, int pid, char *data, int num_bytes) {
                         }
                     }
                 }
-
             }
-
         }
-
     }
 
     if ( seg >= (8 + 64 + 64*64) ) {
@@ -1642,10 +1714,79 @@ int rd_write(int fd, int pid, char *data, int num_bytes) {
         return written_bytes;
     }
 
-    
     return 0;   // the actual number of byte written
 
 }
 
 
+/**
+ * set the file object's file position identified by file descriptor, fd, to offset, 
+ * returning 
+ *      the new position, 
+ *      or the end of the file position if the offset is beyond the file's current size. 
+ *      -1 to indicate an error, if applied to directory files, 
+ *      else 0 to indicate success.
+*/
+int rd_lseek(int _fd, int offset, int pid) {
 
+    // find the fd_table
+    file_object* f_obj = NULL;
+    
+    file_descriptor_table* f_objs = get_fd_table(pid);
+    if ( f_objs == NULL ) {
+        printf("rd_lseek: File descriptor table is NULL.\n");
+        return -1;  
+    }
+    
+    int i;
+    for ( i = 0; i < FD_TABLE_SIZE; i++ ) {
+        if ( f_objs->file_objects[i].pos == _fd ) {
+            f_obj = &f_objs->file_objects[i];
+            break;
+        }
+    }
+    
+    if ( f_obj == NULL ) {
+        printf("rd_lseek: Cannot find this file object.\n");
+        return -1;
+    }
+    
+    inode_struct* inode = f_obj->inode_ptr;
+    if ( inode == NULL ) {
+        printf("rd_lseek: inode is null.\n");
+        return -1;
+    }
+
+    if ( f_obj->usable != 1 ) {
+        printf("rd_lseek: Cnnot find file object. usable != 1 \n");
+        return -1;
+    }
+
+    if ( strcmp(inode->type, "dir\0") == 0 ) {
+        printf("rd_lseek: Cannot lseek a directory!");
+        return -1;
+    }
+
+    if ( offset < 0 ) {
+        printf("rd_lseek: offset < 0 \n");
+        return -1;
+    }
+
+    unsigned int file_size = inode->size; 
+    if ( offset >= file_size ) {
+        // return end of file
+        printf("rd_lseek: return end of file.\n");
+        f_obj->cursor = file_size - 1;
+        return file_size - 1;
+    }
+
+    f_obj->cursor = offset;
+    printf("rd_lseek: change position to %d\n", f_obj->cursor);
+    return f_obj->cursor;
+}
+
+/*
+int rd_read(int fd, char *address, int num_bytes) {
+
+}
+*/

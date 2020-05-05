@@ -119,7 +119,6 @@ typedef struct PROCESS_FD_TABLE {
 
 /* file system initialization*/
 int init_file_sys();
-void cmd_daemon();
 
 /* helper functions */
 int clear_bitmap(unsigned char* map, int index);
@@ -139,12 +138,9 @@ void clear_inode_double_indirect(data_block_struct* double_indirect);
 void print_block_entries_info(int index);
 void print_inode_info(int index);
 void print_bitmap(unsigned char* map);
-
 int clear_entry_in_current_dir(inode_struct* cur_dir_inode, char* filename);
-
 file_object* create_file_object(int pid);
 file_descriptor_table* get_fd_table(int pid);
-
 void print_data_block(int index);
 
 /* file operations */
@@ -153,6 +149,8 @@ int rd_create(char *pathname, char* type, unsigned int mode);
 int rd_unlink(char *pathname);
 int rd_chmod(char *pathname, unsigned int mode);
 int rd_open(char *pathname, unsigned int flags, int pid);
-int rd_write(int fd, int pid, char *data, int num_bytes);
+int rd_write(int _fd, int pid, char *data, int num_bytes);
+
+int rd_lseek(int _fd, int offset, int pid);
 
 #endif // !RAMDISK_H
