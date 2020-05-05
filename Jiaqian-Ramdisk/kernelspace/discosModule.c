@@ -15,10 +15,11 @@ static struct proc_dir_entry *proc_entry;
 /* ioctl entry point */
 static int discos_ioctl(struct inode *inode, struct file *file, unsigned int cmd, unsigned long arg)
 {
+	printk("<1> ioctl entry point\n");
 	int ret = 0;
 	int size, left, flag;
 	char *pathname, *data, *from;
-	ioctl_args_t* args = (ioctl_args_t *)kmalloc(sizeof(ioctl_args_t), GFP_KERNEL);
+	ioctl_args_t* args = (ioctl_args_t *)vmalloc(sizeof(ioctl_args_t));
 	if(copy_from_user(args, (ioctl_args_t *)arg, sizeof(ioctl_args_t))) {
 		printk("<1> Error copy from user\n");
 	}
@@ -27,7 +28,13 @@ static int discos_ioctl(struct inode *inode, struct file *file, unsigned int cmd
 		pathname = (char *)kmalloc(size, GFP_KERNEL);
 		copy_from_user(pathname, args->pathname, size);
 	}
+	/*if (args->data != NULL ) {
+		size = strnlen_user(args->data, 256*8);
+		data = (char *)kmalloc(size, GFP_KERNEL);
+		copy_from_user(data, args->data, size);
+	}*/
 	/*printk("Got user path %s\n", args->pathname);*/
+	
 	switch (cmd) {
 		case RD_INIT:
 			// init_fd_table();		
@@ -39,8 +46,9 @@ static int discos_ioctl(struct inode *inode, struct file *file, unsigned int cmd
 			printk("<1> Opening %s\n", args->pathname);
 			// Send fd back to user space
 			ret = rd_open(args->pathname, args->mode, args->pid);
-			kfree(args);
+			vfree(args);
 			/*spin_unlock(&my_lock);*/
+			printk("<1> Correctly open!\n");
 			return ret;
 		// case RD_CLOSE:
 		// 	printk("<1> Switch case close\n");
@@ -53,9 +61,9 @@ static int discos_ioctl(struct inode *inode, struct file *file, unsigned int cmd
 		// 	vfree(args);
 		// 	/*spin_unlock(&my_lock);*/
 		// 	return ret;
-		case RD_WRITE:
+		case RDD_WRITE:
 			printk("<1> Begin rd write\n");
-			data = kmalloc(args->size, GFP_KERNEL);
+			data = vmalloc(args->size);
 			flag = 1;
 			left = args->size;
 			from = args->data;
@@ -74,20 +82,22 @@ static int discos_ioctl(struct inode *inode, struct file *file, unsigned int cmd
 				}
 			}
 			printk("<1> Here!\n");
-			/*copy_from_user(data, args->address, args->num_bytes);*/
-			/*printk("<1> Got write data from user: %s\n",data);*/
-			ret = rd_write(args->fd, args->pid, data, args->size);
-			kfree(data);
-			kfree(args);
+			// copy_from_user(data, args->address, args->num_bytes);
+			// printk("<1> Got write data from user: %s\n",data);
+			// ret = write(args->fd_num, data - args->num_bytes, args->num_bytes, args->pid);
+			ret = write(args->fd, args->pid, data - args->size, args->size);
+			vfree(data);
+			vfree(args);
 			/*spin_unlock(&my_lock);*/
 			printk("Now ret: %d\n", ret);
 			return ret;
+			break;
  		case RD_CREATE:
 			// spin_lock(&my_lock);
 			printk("RD_CREATE: MODE:%d\n", args->mode);
 			ret = rd_create(pathname, "reg\0", args->mode);
-			kfree(pathname);
-			kfree(args);
+			vfree(pathname);
+			vfree(args);
 			// spin_unlock(&my_lock);
 			return ret;
 			break;
@@ -99,15 +109,15 @@ static int discos_ioctl(struct inode *inode, struct file *file, unsigned int cmd
 		case RD_MKDIR:
 			printk("<1> Mkdir %s\n", pathname);
 			ret = rd_mkdir(pathname);
-			kfree(pathname);
-			kfree(args);
+			vfree(pathname);
+			vfree(args);
 			/*spin_unlock(&my_lock);*/
 			return ret;
 			break;
 		case RD_UNLINK:
 			ret = rd_unlink(pathname);
-			kfree(pathname);
-			kfree(args);
+			vfree(pathname);
+			vfree(args);
 			/*spin_unlock(&my_lock);*/
 			return ret;
 			break;
@@ -118,7 +128,7 @@ static int discos_ioctl(struct inode *inode, struct file *file, unsigned int cmd
 		// 	return ret;
 		default:
 			printk("<1> hitting default case \n");
-			kfree(args);
+			vfree(args);
 			/*spin_unlock(&my_lock);*/
 			return -EINVAL;
 			break;			

@@ -1,173 +1,10 @@
 #include "discos.h"
 
-// #include <stdlib.h>
-// #include <unistd.h>
-// #include <fcntl.h>
-// #include <sys/stat.h>
-// #include <dirent.h>
-
-/*
-pwd
-ls
-cd 
-cd 
-*/
-
-/* Macro from test file */
-#define TEST1
-// #define TEST2
-// #define TEST3
-// #define TEST4
-#define TEST5
-// #define TEST6
-
-#define PATH_PREFIX ""
-
-// #define CREAT   rd_create
-// #define OPEN    rd_open
-// #define WRITE   rd_write
-// #define READ    rd_read
-// #define UNLINK  rd_unlink
-// #define MKDIR   rd_mkdir
-// #define CLOSE   rd_close
-// #define LSEEK   rd_lseek
-// #define CHMOD   rd_chmod
-
-// File modes
-// #define RD  (S_IRUSR | S_IRGRP | S_IROTH)
-// #define RW  (S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH)
-// #define WR  (S_IWUSR | S_IRGRP | S_IROTH)
 
 /* global variables */
 filesys_struct* discos;
 process_fd_table* p_fd_table;
 
-
-// int main(void) {
-
-// 	printk("\n\nDiscos ##########\n");
-
-// 	// Data structure size check
-//     printk("Data structure size check:\n");
-// 	printk("   superblock %d\n", sizeof(superblock_struct));
-// 	printk("   dir entry %d\n", sizeof(dir_entry_struct));
-// 	printk("   data block %d\n", sizeof(data_block_struct));
-// 	printk("   inode %d\n", sizeof(inode_struct));
-// 	printk("   filesys %d\n", sizeof(filesys_struct));
-    
-// 	// custom test
-//     /*
-//     int ret;
-//     ret = rd_mkdir("/");    // output root exits
-//     ret = rd_mkdir("/folder1"); 
-//     ret = rd_mkdir("/folder1/floder2");
-//     ret = rd_mkdir("/folder1/floder3");
-//     ret = rd_mkdir("/folder1/floder3/floder4");
-//     ret = rd_create("/folder1/floder2/Hellooooooooo", "reg\0", 1);
-//     print_bitmap(discos->bitmap);
-// 	*/
-
-//     // initialize file system
-// 	init_file_sys();
-
-// 	/* test_file.c */
-//     char pathname[80];
-
-//     int retval, i;
-//     int fd;
-//     int index_node_number;
-//     #ifdef TEST1
-
-//     /* ****TEST 1: MAXIMUM file creation**** */
-
-//     /* Generate MAXIMUM regular files */
-//     /*for ( i = 0; i < MAX_NUM_FILE - 1; i++ ) { 
-//         sprintk (pathname, PATH_PREFIX "/file%d", i);
-    
-//         retval = CREAT (pathname, "reg\0", RD);
-    
-//         if (retval < 0) {
-//             fprintk (stderr, "creat: File creation error! status: %d (%s)\n", retval, pathname);
-//             perror("Error!");
-      
-//             if (i != MAX_NUM_FILE - 1)
-// 	            exit(EXIT_FAILURE);
-//         }
-    
-//         memset (pathname, 0, 80);
-//     }   */
-//     for ( i = 0; i < 1024 - 1; i++ ) { 
-//         sprintk (pathname, PATH_PREFIX "/file%d", i);
-    
-//         retval = CREAT (pathname, "reg\0", RD);
-    
-//         if (retval < 0) {
-//             fprintk (stderr, "creat: File creation error! status: %d (%s)\n", retval, pathname);
-//             perror("Error!");
-      
-//             if (i != 1024 - 1)
-// 	            exit(EXIT_FAILURE);
-//         }
-    
-//         memset (pathname, 0, 80);
-//     }   
-//     printk("<1> Test 1 created 1023 files succeeded!\n\n");
-//     print_bitmap(discos->bitmap);
-//     for ( i = 0; i < 65; i++ ) {
-//         print_block_info(i);
-//     }
-//     /* Delete all the files created */
-//     for (i = 0; i < 1024 - 1; i++) { 
-        
-//         sprintk (pathname, PATH_PREFIX "/file%d", i);
-
-//         retval = UNLINK (pathname);
-    
-//         if (retval < 0) {
-//             fprintk (stderr, "unlink: File deletion error! status: %d\n", retval);
-      
-//             exit(EXIT_FAILURE);
-//         }
-    
-//         memset (pathname, 0, 80);
-//     }
-//     printk("<1> Test 1 pass!\n\n");
-//     #endif // TEST1
-
-//     #ifdef TEST5
-  
-//     /* ****TEST 5: Make directory including entries **** */
-//     retval = MKDIR (PATH_PREFIX "/dir1");
-    
-//     if (retval < 0) {
-//         fprintk (stderr, "mkdir: Directory 1 creation error! status: %d\n", retval);
-//         exit(EXIT_FAILURE);
-//     }
-
-//     retval = MKDIR (PATH_PREFIX "/dir1/dir2");
-    
-//     if (retval < 0) {
-//         fprintk (stderr, "mkdir: Directory 2 creation error! status: %d\n", retval);
-
-//         exit(EXIT_FAILURE);
-//     }
-
-//     retval = MKDIR (PATH_PREFIX "/dir1/dir3");
-    
-//     if (retval < 0) {
-//         fprintk (stderr, "mkdir: Directory 3 creation error! status: %d\n", retval);
-
-//         exit(EXIT_FAILURE);
-//     }
-//     printk("<1> TEST 5 pass!\n\n");
-//     #endif // TEST5
-
-
-// 	/* free ramdisk */
-// 	free(discos);
-
-// 	return 0;
-// }
 
 void print_block_info(int index) {
     printk("Block %d info: \n", index);
@@ -178,24 +15,6 @@ void print_block_info(int index) {
     }
 }
 
-// void cmd_daemon() {
-// 	char cmd[CMD_MAX_LENGTH] = "Hello Discos!\n";
-
-// 	printk("%s", cmd);
-
-// 	while ( 1 ) {
-// 		printk("Discos# ");
-
-// 		fgets(cmd, CMD_MAX_LENGTH, stdin);	// char* _Buffer, int   _MaxCount, FILE* _Stream
-// 		cmd[strlen(cmd)-1] = '\0';
-
-// 		if ( !strcmp(cmd, "exit") ) {
-// 			printk("Exit!!!\n");
-// 			break;
-// 		}
-
-// 	}
-// }
 
 /* get the free block number from bitmap 
     return the number of the free data block.
@@ -324,6 +143,7 @@ void parse_absolute_path(char* _path, char* _current_dir, char* filename) {
     // char * strcpy ( char * destination, const char * source );
 	strcpy(filename, &_path[i + 1]);  
 }
+
 
 /*
     return the inode number
@@ -1200,6 +1020,7 @@ file_descriptor_table* get_fd_table(int pid) {
     return NULL;
 }
 
+
 int clear_entry_in_current_dir(inode_struct* cur_dir_inode, char* filename) {
     printk("clearing entry in current dir...\n");
 	dir_entry_struct* entry;  
@@ -1242,11 +1063,13 @@ int clear_entry_in_current_dir(inode_struct* cur_dir_inode, char* filename) {
     // find entry in single indirect
     data_block_struct* single_indirect = cur_dir_inode->single_indirect_ptrs;
     if ( single_indirect != NULL ) {
-        // int nonEmptyBlocks = 0;
+        int nonEmptyBlocks = 0;
+        int lastEntry = 0;
         for ( i = 0; i < BLOCK_SIZE/4; i++ ) {
             data_block_struct* block = single_indirect->index_block[i];
             int nonEmptyEntries = 0;
             if ( block != NULL ) {
+                nonEmptyBlocks += 1;
                 int j;
                 for ( j = 0; j < BLOCK_SIZE/16; j++ ) {
                     entry = &block->entries[j];
@@ -1264,13 +1087,25 @@ int clear_entry_in_current_dir(inode_struct* cur_dir_inode, char* filename) {
             }
             // printf("nonEmptyEntries: %d   findEntry=%d\n", nonEmptyEntries, findEntry);
             if ( findEntry == 1 && nonEmptyEntries == 1 ) {
-                printk("<><> clear bit %d\n", single_indirect->index_block[i] -  &discos->data_blocks[0]);
-                clear_bitmap(discos->bitmap, single_indirect->index_block[i] -  &discos->data_blocks[0]);
+                // printf("<><> clear bit %d\n", single_indirect->index_block[i] - &discos->data_blocks[0]);
+                clear_bitmap(discos->bitmap, single_indirect->index_block[i] - &discos->data_blocks[0]);
                 single_indirect->index_block[i] = NULL;
                 print_bitmap(discos->bitmap);
-                return 0;
+                lastEntry = 1;
+                // return 0;
             }
         }
+        if ( findEntry == 1 && nonEmptyBlocks == 1 && lastEntry == 1 ) {
+            // printf("Clearing single indirect block itself.\n");
+            // printf("<><> clear bit %d\n", cur_dir_inode->single_indirect_ptrs - &discos->data_blocks[0]);
+            clear_bitmap(discos->bitmap, cur_dir_inode->single_indirect_ptrs - &discos->data_blocks[0]);
+            cur_dir_inode->single_indirect_ptrs = NULL;
+            print_bitmap(discos->bitmap);
+        }
+    }
+
+    if ( findEntry == 1 ) {
+        return 0;
     }
 
     // find entry in double indirect
@@ -1312,7 +1147,7 @@ int clear_entry_in_current_dir(inode_struct* cur_dir_inode, char* filename) {
  * in which case you should identify a buffer region from which your data is written.
 */
 
-int rd_write(int fd, int pid, char *data, int num_bytes) {
+int write(int fd, int pid, char *data, int num_bytes) {
 
     // find the fd_table
     file_object* f_obj = NULL;
@@ -1383,6 +1218,7 @@ int rd_write(int fd, int pid, char *data, int num_bytes) {
                 direct_block->data[j] = data[written_bytes];
                 written_bytes += 1;
                 f_obj->cursor += 1;
+                inode->size += 1;
                 if ( written_bytes == num_bytes ) {
                     // finish 
                     printk("rd_write: written_byte=%d\n", written_bytes);
@@ -1392,33 +1228,71 @@ int rd_write(int fd, int pid, char *data, int num_bytes) {
         }
     }
 
-    // write in the direct blocks
-    /*for ( i = 0; i < INODE_NUM_DIRECT_PTR; i++ ) {
-        data_block_struct* direct_block = inode->pointers[i];
-        
-        if ( direct_block == NULL ) {
-            // get a new block if this direct block is empty
-
-            continue;
+    // written_bytes is not zero here.
+    seg = inode->size / BLOCK_SIZE;
+    offset = inode->size % BLOCK_SIZE;
+    // write in the single indirect blocks
+    // single indirect blocks start from the 9th block
+    if ( seg >= 8 && seg < (8+64) ) {
+        data_block_struct* single_indirect = inode->single_indirect_ptrs;
+        if ( single_indirect == NULL ) {
+            printk("<1> rd_write: we need a new single_indirect poitner.\n");
+            int free_block_num = get_free_block_num_from_bitmap(discos->bitmap);
+            if ( free_block_num == -1 ) {
+                printk("<1> rd_write: no free block found!\n");
+                return -1;
+            }
+            inode->single_indirect_ptrs = allocate_data_block(free_block_num); 
+            single_indirect = inode->single_indirect_ptrs;
         }
-        int j;
-        for ( j = 0; j < BLOCK_SIZE; j++ ) {
-            if ( data[written_bytes] != '\0' ) {
-                direct_block->data[j] = data[written_bytes];
-                written_bytes += 1;
-                f_obj->cursor += 1;
-                if ( written_bytes == num_bytes ) {
-                    // finish 
-                    printf("rd_write: written_byte=%d\n", written_bytes);
-                    return written_bytes;
+        
+        // iterate the 64 index block
+        seg = seg - 8;      // single indirect blocks start from the 9th block
+        for ( i = seg; i < BLOCK_SIZE/4; i++ ) {
+            data_block_struct* block = single_indirect->index_block[i];
+            if ( block == NULL ) {
+                int free_block_num = get_free_block_num_from_bitmap(discos->bitmap);
+                if ( free_block_num == -1 ) {
+                    printk("<1> rd_write: no free block found!\n");
+                    return -1;
+                }
+                single_indirect->index_block[i] = allocate_data_block(free_block_num);
+                block = single_indirect->index_block[i];
+            }
+
+            // begin to write
+            int j;
+            for ( j = offset; j < BLOCK_SIZE; j++ ) {
+                if ( data[written_bytes] != '\0' ) {
+                    block->data[j] = data[written_bytes];
+                    written_bytes += 1;
+                    f_obj->cursor += 1;
+                    inode->size += 1;   // update file size to update the seg and offset
+                    if ( written_bytes == num_bytes ) {
+                        // finish 
+                        printk("rd_write: written_byte=%d\n", written_bytes);
+                        return written_bytes;
+                    }
                 }
             }
         }
-    }*/
+    }
+
+    // write in double indirect blocks
+    if ( seg >= (8 + 64) && seg < (8 + 64 + 64*64) ) {
+        
+    }
+
+    if ( seg >= (8 + 64 + 64*64) ) {
+        printk("<1> rd_write: MAXIMUM FILE LIMIT!\n");
+        return written_bytes;
+    }
+
     printk("Hererere!\n");
     return 0;   // the actual number of byte written
 
 }
+
 
 void print_data_block(int index) {
     printk("Data block %d content: \n", index);

@@ -7,6 +7,8 @@
 #include <dirent.h>
 #include <sys/ioctl.h>
 
+// #include <libexplain/ioctl.h>
+
 #define MAGIC_NUM 88
 
 #define RD_INIT    _IOW(MAGIC_NUM, 0, ioctl_args_t*)
@@ -34,4 +36,4 @@ int rd_creat(char* pathname, unsigned int mode);
 int rd_unlink(char* pathname);
 int rd_open(char* pathname, unsigned int mode);
 int rd_mkdir(char* pathname);
-int rd_write(int fd, char* data, int number_of_data);
+int rd_write(int _fd, char* data, int number_of_data);

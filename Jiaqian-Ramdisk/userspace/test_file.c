@@ -184,14 +184,14 @@ int main () {
 #ifdef TEST_SINGLE_INDIRECT
   
   /* Try writing to all single-indirect data blocks */
-  // retval = WRITE (fd, data2, sizeof(data2));
+  retval = WRITE (fd, data2, sizeof(data2));
   
-  // if (retval < 0) {
-  //   fprintf (stderr, "write: File write STAGE2 error! status: %d\n",
-	//      retval);
+  if (retval < 0) {
+    fprintf (stderr, "write: File write STAGE2 error! status: %d\n",
+	     retval);
 
-  //   exit(EXIT_FAILURE);
-  // }
+    exit(EXIT_FAILURE);
+  }
 
 #ifdef TEST_DOUBLE_INDIRECT
 

@@ -1,9 +1,6 @@
 #ifndef RAMDISK_H
 #define RAMDISK_H
 
-// #include <stdio.h>
-// #include <string.h>		// strcmp
-
 #include <linux/module.h>
 #include <linux/init.h>
 #include <linux/errno.h>
@@ -153,7 +150,7 @@ typedef struct PROCESS_FD_TABLE {
 
 /* file system initialization*/
 int init_file_sys();
-void cmd_daemon();
+
 
 /* helper functions */
 int clear_bitmap(unsigned char* map, int index);
@@ -182,7 +179,7 @@ int rd_create(char *pathname, char* type, int mode);
 int rd_unlink(char *pathname);
 int rd_chmod(char *_pathname, unsigned int mode);
 int rd_open(char *_pathname, unsigned int flags, int pid);
-int rd_write(int fd, int pid, char *data, int num_bytes);
+int write(int fd, int pid, char *data, int num_bytes);
 
 void cleanup_fs();
 
