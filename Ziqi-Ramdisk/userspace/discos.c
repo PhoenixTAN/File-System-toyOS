@@ -45,8 +45,8 @@ static char data2[BLOCK_SIZE/4*BLOCK_SIZE];     /* Single indirect data size */
 /* global variables */
 filesys_struct* discos;
 
-process_fd_table p_fd_table[THERAD_POOL_SIZE];
-
+// process_fd_table p_fd_table[THERAD_POOL_SIZE];
+process_fd_table* p_fd_table;
 
 int main(void) {
 
@@ -243,7 +243,7 @@ int main(void) {
     
 	/* free ramdisk */
 	free(discos);
-    // free(p_fd_table);
+    free(p_fd_table);
 	return 0;
 }
 
@@ -380,7 +380,7 @@ int init_file_sys() {
 	int retval;
 	discos = (filesys_struct*)malloc(sizeof(filesys_struct));
     memset(discos, 0, sizeof(sizeof(filesys_struct)));
-    // p_fd_table = malloc(sizeof(process_fd_table)*THERAD_POOL_SIZE);
+    p_fd_table = malloc(sizeof(process_fd_table)*THERAD_POOL_SIZE);
     memset(p_fd_table, 0, sizeof(process_fd_table)*THERAD_POOL_SIZE);
 	if ( !discos ) {
 		printf("discos malloc fail.\n");
@@ -1123,11 +1123,13 @@ int clear_entry_in_current_dir(inode_struct* cur_dir_inode, char* filename) {
     // TODO: clear the single indirect index block
     data_block_struct* single_indirect = cur_dir_inode->single_indirect_ptrs;
     if ( single_indirect != NULL ) {
-        // int nonEmptyBlocks = 0;
+        int nonEmptyBlocks = 0;
+        int lastEntry = 0;
         for ( i = 0; i < BLOCK_SIZE/4; i++ ) {
             data_block_struct* block = single_indirect->index_block[i];
             int nonEmptyEntries = 0;
             if ( block != NULL ) {
+                nonEmptyBlocks += 1;
                 int j;
                 for ( j = 0; j < BLOCK_SIZE/16; j++ ) {
                     entry = &block->entries[j];
@@ -1145,13 +1147,25 @@ int clear_entry_in_current_dir(inode_struct* cur_dir_inode, char* filename) {
             }
             // printf("nonEmptyEntries: %d   findEntry=%d\n", nonEmptyEntries, findEntry);
             if ( findEntry == 1 && nonEmptyEntries == 1 ) {
-                printf("<><> clear bit %d\n", single_indirect->index_block[i] -  &discos->data_blocks[0]);
-                clear_bitmap(discos->bitmap, single_indirect->index_block[i] -  &discos->data_blocks[0]);
+                printf("<><> clear bit %d\n", single_indirect->index_block[i] - &discos->data_blocks[0]);
+                clear_bitmap(discos->bitmap, single_indirect->index_block[i] - &discos->data_blocks[0]);
                 single_indirect->index_block[i] = NULL;
                 print_bitmap(discos->bitmap);
-                return 0;
+                lastEntry = 1;
+                // return 0;
             }
         }
+        if ( findEntry == 1 && nonEmptyBlocks == 1 && lastEntry == 1 ) {
+            printf("Clearing single indirect block itself.\n");
+            printf("<><> clear bit %d\n", cur_dir_inode->single_indirect_ptrs - &discos->data_blocks[0]);
+            clear_bitmap(discos->bitmap, cur_dir_inode->single_indirect_ptrs - &discos->data_blocks[0]);
+            cur_dir_inode->single_indirect_ptrs = NULL;
+            print_bitmap(discos->bitmap);
+        }
+    }
+
+    if ( findEntry == 1 ) {
+        return 0;
     }
 
     // TODO
@@ -1364,7 +1378,7 @@ int rd_open(char *_pathname, unsigned int flags, int pid) {
     f_obj->cursor = 0;
     f_obj->inode_ptr = file_inode;
     f_obj->status = flags;
-
+    free(pathname);
     return f_obj->pos;  // file descriptor value
 }
 
