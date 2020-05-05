@@ -20,7 +20,7 @@
 #define TEST1
 #define TEST2
 // #define TEST3
-// #define TEST4
+#define TEST4
 #define TEST5
 // #define TEST6
 
@@ -154,7 +154,7 @@ int main () {
     exit(EXIT_FAILURE);
   }
 
-  retval =  OPEN (PATH_PREFIX "bigfile", READWRITE); /* Open file to write to it */
+  retval =  OPEN (PATH_PREFIX "bigfile", RW); /* Open file to write to it */
   
   if (retval < 0) {
     fprintf (stderr, "open: File open error! status: %d\n",
@@ -289,7 +289,7 @@ int main () {
 #ifdef TEST4
 
   /* ****TEST 4: Check permissions**** */
-  retval = CHMOD(PATH_PREFIX "/bigfile", RD); // Change bigfile to read-only
+  retval = CHMOD(PATH_PREFIX "bigfile", RD); // Change bigfile to read-only
   
   if (retval < 0) {
     fprintf (stderr, "chmod: Failed to change mode! status: %d\n",
@@ -308,7 +308,7 @@ int main () {
   
   /* Remove the biggest file */
 
-  retval = UNLINK (PATH_PREFIX "/bigfile");
+  retval = UNLINK (PATH_PREFIX "bigfile");
 	
   if (retval < 0) {
     fprintf (stderr, "unlink: /bigfile file deletion error! status: %d\n",

@@ -468,6 +468,7 @@ int rd_create(char *pathname, char* type, int mode) {
 
     printk("inode type: %s\n", type);
     strcpy(free_inode->type, type);
+    free_inode->access = mode;
 
     /* update size */
     current_path_inode->size += 16;
@@ -881,7 +882,7 @@ void cleanup_fs() {
  * change the mode (i.e., access rights) of a file identified by the absolute pathname. 
  * Return 0 if successful or a negative value for an error.
 */
-int rd_chmod(char *_pathname, unsigned int mode) {
+int rd_chmod(char *_pathname, unsigned int mode, int pid) {
 
     char* pathname = kmalloc(strlen(_pathname), GFP_KERNEL);
     memset(pathname, 0, strlen(pathname));
@@ -1183,7 +1184,8 @@ int write(int fd, int pid, char *data, int num_bytes) {
     
     // access right check
     // WR RD WR
-    if ( f_obj->status == RD ) {
+    printk("Now access right: %d\n", f_obj->status);
+    if ( inode->access == RD || f_obj->status == RD) {
         printk("rd_write: Access denied! f_obj->status is %d\n", f_obj->status);
         return -1;
     }

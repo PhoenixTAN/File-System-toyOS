@@ -50,7 +50,7 @@ int rd_open(char* pathname, unsigned int mode) {
     memset(args, 0, sizeof(ioctl_args_t));
     args->pathname = pathname;
     args->mode = mode;
-    args->pid = 100; //(int)getpid();
+    args->pid = (int)getpid();
     printf("<> rd_open: args->pid=%d\n", args->pid);
     ret = ioctl(fd, RD_OPEN, args);
     free(args);
@@ -68,6 +68,17 @@ int rd_write(int _fd, char* data, int number_of_data) {
     ret = 0;
     ret = ioctl(fd, RD_WRITE, args);
     printf("userspace ret: %d\n", ret);
+    free(args);
+    return ret;
+}
+
+int rd_chmod(char* pathname, unsigned int mode) {
+    ioctl_args_t* args = malloc(sizeof(ioctl_args_t));
+    memset(args, 0, sizeof(ioctl_args_t));
+    args->mode = mode;
+    args->pathname = pathname;
+    args->pid = (int)getpid();
+    ret = ioctl(fd, RD_CHMOD, args);
     free(args);
     return ret;
 }

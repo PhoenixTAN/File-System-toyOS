@@ -41,6 +41,7 @@
 #define RD_LSEEK   _IOW(MAGIC_NUM, 7, ioctl_args_t*)
 #define RD_UNLINK  _IOW(MAGIC_NUM, 8, ioctl_args_t*)
 #define RD_READDIR _IOW(MAGIC_NUM, 9, ioctl_args_t*)
+#define RD_CHMOD  _IOW(MAGIC_NUM, 10, ioctl_args_t*)
 
 #define RD  (S_IRUSR | S_IRGRP | S_IROTH)
 #define RW  (S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH)
@@ -177,7 +178,7 @@ void print_data_block(int index);
 int rd_mkdir(char* pathname);
 int rd_create(char *pathname, char* type, int mode);
 int rd_unlink(char *pathname);
-int rd_chmod(char *_pathname, unsigned int mode);
+int rd_chmod(char *_pathname, unsigned int mode, int pid);
 int rd_open(char *_pathname, unsigned int flags, int pid);
 int write(int fd, int pid, char *data, int num_bytes);
 

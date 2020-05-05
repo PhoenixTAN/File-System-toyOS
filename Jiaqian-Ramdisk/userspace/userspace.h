@@ -21,6 +21,7 @@
 #define RD_LSEEK   _IOW(MAGIC_NUM, 7, ioctl_args_t*)
 #define RD_UNLINK  _IOW(MAGIC_NUM, 8, ioctl_args_t*)
 #define RD_READDIR _IOW(MAGIC_NUM, 9, ioctl_args_t*)
+#define RD_CHMOD  _IOW(MAGIC_NUM, 10, ioctl_args_t*)
 
 typedef struct ioctl_args {
 	int size;  //size of read
@@ -37,3 +38,4 @@ int rd_unlink(char* pathname);
 int rd_open(char* pathname, unsigned int mode);
 int rd_mkdir(char* pathname);
 int rd_write(int _fd, char* data, int number_of_data);
+int rd_chmod(char* pathname, unsigned int mode);

@@ -121,6 +121,9 @@ static int discos_ioctl(struct inode *inode, struct file *file, unsigned int cmd
 			/*spin_unlock(&my_lock);*/
 			return ret;
 			break;
+		case RD_CHMOD:
+			ret = rd_chmod(pathname, args->mode, args->pid);
+			return ret;
 		// case RD_READDIR:
 		// 	ret = readdir(args->pid, args->fd_num, args->address);
 		// 	vfree(args);
