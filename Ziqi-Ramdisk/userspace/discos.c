@@ -197,7 +197,7 @@ int main(void) {
     #ifdef TEST3
 
     /* ****TEST 3: Seek and Read file test**** */
-    retval = LSEEK (fd, 0);	/* Go back to the beginning of your file */
+    retval = LSEEK (fd, 0, 100);	/* Go back to the beginning of your file */
 
     if (retval < 0) {
         fprintf (stderr, "lseek: File seek error! status: %d\n", retval);
@@ -205,9 +205,9 @@ int main(void) {
     }
 
     /* Try reading from all direct data blocks */
-    retval = READ (fd, addr, sizeof(data1));
+    retval = READ (fd, addr, sizeof(data1), 100);
   
-    if (retval < 0) {
+    if ( retval < 0 ) {
         fprintf (stderr, "read: File read STAGE1 error! status: %d\n", retval);
         exit(EXIT_FAILURE);
     }
@@ -220,7 +220,7 @@ int main(void) {
     #ifdef TEST_SINGLE_INDIRECT
 
     /* Try reading from all single-indirect data blocks */
-    retval = READ (fd, addr, sizeof(data2));
+    retval = READ (fd, addr, sizeof(data2), 100);
   
     if (retval < 0) {
         fprintf (stderr, "read: File read STAGE2 error! status: %d\n", retval);
@@ -234,7 +234,7 @@ int main(void) {
     #ifdef TEST_DOUBLE_INDIRECT
 
     /* Try reading from all double-indirect data blocks */
-    retval = READ (fd, addr, sizeof(data3));
+    retval = READ (fd, addr, sizeof(data3), 100);
   
     if (retval < 0) {
         fprintf (stderr, "read: File read STAGE3 error! status: %d\n", retval);
@@ -250,7 +250,7 @@ int main(void) {
     #endif // TEST_SINGLE_INDIRECT
 
     /* Close the bigfile */
-    retval = CLOSE(fd);
+    retval = CLOSE(fd, 100);
   
     if (retval < 0) {
         fprintf (stderr, "close: File close error! status: %d\n", retval);
@@ -1850,8 +1850,67 @@ int rd_read(int _fd, char *data, int num_bytes, int pid) {
 }
 
 
-/***/
-/*int rd_close(int _fd, int pid) {
+/**
+ * close the corresponding file descriptor 
+ * and release the file object matching the value returned from a previous rd_open(). 
+ * Return 0 on success and -1 on error. 
+ * An error occurs if fd refers to a non-existent file.
+*/
+int rd_close(int _fd, int pid) {
 
-}*/
+    /* preprocess: find this file object first */
+
+    // find the fd_table
+    file_object* f_obj = NULL;
+    
+    file_descriptor_table* f_objs = get_fd_table(pid);
+    if ( f_objs == NULL ) {
+        printf("rd_close: File descriptor table is NULL.\n");
+        return -1;  
+    }
+    
+    int i;
+    for ( i = 0; i < FD_TABLE_SIZE; i++ ) {
+        if ( f_objs->file_objects[i].pos == _fd ) {
+            f_obj = &f_objs->file_objects[i];
+            break;
+        }
+    }
+    
+    if ( f_obj == NULL ) {
+        printf("rd_close: Cannot find this file object.\n");
+        return -1;
+    }
+    
+    inode_struct* inode = f_obj->inode_ptr;
+    if ( inode == NULL ) {
+        printf("rd_close: inode is null.\n");
+        return -1;
+    }
+
+    if ( f_obj->usable != 1 ) {
+        printf("rd_close: Cnnot find file object. usable != 1 \n");
+        return -1;
+    }
+
+    if ( strcmp(inode->type, "dir\0") == 0 ) {
+        printf("rd_close: Cannot close a directory!");
+        return -1;
+    }
+
+
+    /* preprocess finish */
+
+
+    // release the file object
+    if ( f_obj->usable == 1 ) {
+        f_obj->inode_ptr = NULL;
+        memset(f_obj, 0, sizeof(file_object));
+        printf("rd_close: release object.\n");
+        return 0;
+    }
+
+    printf("<1> rd_close: ERROR!\n");
+    return -1;
+}
 

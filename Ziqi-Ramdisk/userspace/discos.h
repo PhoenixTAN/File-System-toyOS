@@ -153,5 +153,6 @@ int rd_write(int _fd, int pid, char *data, int num_bytes);
 
 int rd_lseek(int _fd, int offset, int pid);
 int rd_read(int fd, char *data, int num_bytes, int pid);
+int rd_close(int _fd, int pid);
 
 #endif // !RAMDISK_H
