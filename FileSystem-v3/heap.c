@@ -16,13 +16,13 @@
 
 #define LASTPTR (*(char **)((char *)baseptr - DSIZE))
 
-#define DEFAULT_MEM_SIZE (1 << 20)
+
 
 char buffer[DEFAULT_MEM_SIZE];
 char *baseptr;
 
-void init_heap(void)
-{
+
+void init_heap(void) {
     baseptr = buffer;
     baseptr += DSIZE;
     LASTPTR = baseptr;
@@ -30,86 +30,85 @@ void init_heap(void)
     PUTW((char *)baseptr + WSIZE, 0);        // no previous block
 }
 
-void *malloc(size_t size)
-{
-    if (!size) // nothing to allocate
-    {
+
+void *malloc(size_t size) {
+    if (!size) {
+        // nothing to allocate
         return NULL;
     }
+
     size = (size + 7) >> 3 << 3;             // round to 8
     const unsigned blocksize = size + DSIZE; // plus 8-byte header
     unsigned freesize;
     char *p = baseptr;
+
     // first fit
-    while (p && (GET_ALLOC(p) || (freesize = GET_SIZE(p)) < blocksize))
-    {
+    while ( p && (GET_ALLOC(p) || (freesize = GET_SIZE(p)) < blocksize) ) {
         p = NEXT_BLKP(p);
     }
-    if (!p) // no enough space
-    {
+    if (!p) {
+        // no enough space
         return NULL;
     }
+
     unsigned newblocksize = freesize - blocksize;
-    if (newblocksize <= DSIZE) // no enough space for a new free block
-    {
+    if (newblocksize <= DSIZE) {
+        // no enough space for a new free block
         PUTW(p, PACK(freesize, 1));
     }
-    else // split the free block
-    {
+    else {
+        // split the free block
         char *const next = NEXT_BLKP(p); // pointer to the address after the free block, NULL if p is the last block
         PUTW(p, PACK(blocksize, 1));
         char *const newfree = p + blocksize; // pointer to the new free block
         PUTW(newfree, newblocksize);
         PUTW(newfree + WSIZE, blocksize);
-        if (next)
-        {
+        if (next) {
             PUTW(next + WSIZE, newblocksize);
         }
-        else
-        {
+        else {
             LASTPTR = newfree;
         }
     }
     return p + DSIZE;
 }
 
-void Combine(char *const p, char *const q) // combine a block p and its next q (must be free) to a free block
-{
+/**
+ * combine a block p and its next q (must be free) to a free block
+*/
+void Combine(char *const p, char *const q) {
     const unsigned blocksize = GET_SIZE(p) + GETW(q);
     char *const next = NEXT_BLKP(q);
     PUTW(p, blocksize);
-    if (next)
-    {
+    if (next) {
         PUTW(next + WSIZE, blocksize);
     }
-    else
-    {
+    else {
         LASTPTR = p;
     }
 }
 
-void free(void *addr)
-{
-    if (!addr) // nothing to free
-    {
+
+void free(void *addr) {
+    if (!addr) {
+        // nothing to free
         return;
     }
+    
     char *const p = (char *)addr - DSIZE;
     // first test next block
     char *next = NEXT_BLKP(p);
-    if (next && !GET_ALLOC(next))
-    {
+    
+    if (next && !GET_ALLOC(next)) {
         Combine(p, next);
     }
-    else
-    {
+    else {
         unsigned blocksize = GET_SIZE(p);
         PUTW(p, blocksize);
     }
     // then test previous block
     char *prev = PREV_BLKP(p);
-    if (prev && !GET_ALLOC(prev))
-    {
+    if (prev && !GET_ALLOC(prev)) {
         Combine(prev, p);
     }
 }
